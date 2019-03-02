@@ -1,4 +1,4 @@
-const msaSheet = module.exports = new Msa.Module("sheet")
+const msaSheet = module.exports = new Msa.Module()
 
 // requires
 
