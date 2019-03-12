@@ -1,5 +1,5 @@
 # msa-sheet
-MySimpleApp genereic component to create html content in a WYSIWYG way.
+MySimpleApp module offering the possibility to create WYSIWYG sheets.
 
 ## SERVER API
 

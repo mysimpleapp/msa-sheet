@@ -1,13 +1,13 @@
 {
-  "name": "msa-sheet",
+  "name": "@mysimpleapp/msa-sheet",
   "version": "0.1.0",
-  "description": "Sheet MySimpleApp module",
+  "description": "MySimpleApp module offering the possibility to create WYSIWYG sheets",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Nicolas CARREZ <nicolas.carrez@gmail.com>",
-  "license": "MIT",
+  "license": "ISC",
   "msaKey": "sheet",
   "msaDependecies": {
     "db": "../msa-db",
