@@ -1,8 +1,8 @@
 import { importHtml, ajax, Q } from "/msa/msa.js"
 import "/sheet/msa-sheet-generic-editor.js"
 import { createPopup } from "/utils/msa-utils-popup.js"
-import { postFile } from "/fs/msa-fs.js"
-import "/fs/msa-fs-explorer.js"
+//import { postFile } from "/fs/msa-fs.js"
+//import "/fs/msa-fs-explorer.js"
 //import "/img/msa-img-selector.js"
 
 // SVGs

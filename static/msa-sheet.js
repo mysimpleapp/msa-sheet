@@ -1,4 +1,4 @@
-import { importHtml } from "/msa/msa.js"
+import { importHtml, ajax } from "/msa/msa.js"
 //import { HTMLMsaSheetMenuElement } from "/sheet/msa-sheet-menu.js"
 
 importHtml(`<style>
@@ -19,8 +19,8 @@ importHtml(`<style>
 
 export class HTMLMsaSheetElement extends HTMLElement {
 
-	getType(){
-		return this.getAttribute("type")
+	getBaseUrl(){
+		return this.getAttribute("base-url")
 	}
 	getKey(){
 		return this.getAttribute("key")
@@ -28,9 +28,17 @@ export class HTMLMsaSheetElement extends HTMLElement {
 	isEditable(){
 		return (this.getAttribute("editable")=="true")
 	}
+	toFetch(){
+		return (this.getAttribute("fetch")=="true")
+	}
 
-	connectedCallback(){
+	async connectedCallback(){
 		this.editing = false
+		if(this.toFetch()){
+			const sheet = await ajax("GET", `${this.getBaseUrl()}/_sheet/${this.getKey()}`)
+			importHtml(sheet.content, this)
+			this.setAttribute("editable", sheet.editable)
+		}
 		// dynamically import msa-sheet-menu
 		if(this.isEditable())
 			importHtml({ wel:'/sheet/msa-sheet-menu.js' }, this)

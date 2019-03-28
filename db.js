@@ -1,7 +1,6 @@
 // DB model
 const { orm, Orm } = Msa.require("db")
 const SheetsDb = orm.define('msa_sheets', {
-	type: { type: Orm.STRING, primaryKey: true },
 	key: { type: Orm.STRING, primaryKey: true },
 	owner: Orm.STRING,
 	content: { type: Orm.TEXT,
