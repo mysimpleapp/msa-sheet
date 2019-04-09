@@ -1,11 +1,16 @@
 // DB model
 const { orm, Orm } = Msa.require("db")
+const { sheetParamsDef } = require("./params")
+
 const SheetsDb = orm.define('msa_sheets', {
 	key: { type: Orm.STRING, primaryKey: true },
-	owner: Orm.STRING,
-	content: { type: Orm.TEXT,
-		get() { const val = this.getDataValue('content'); return (val == "") ? "" : JSON.parse(val) },
-		set(val) { this.setDataValue('content', (val === "") ? "" : JSON.stringify(val)) }
+	contentBody: Orm.TEXT,
+	contentHead: Orm.TEXT,
+	createdBy: Orm.STRING,
+	updatedBy: Orm.STRING,
+	params: { type: Orm.TEXT,
+		get() { const val = this.getDataValue('params'); return val ? sheetParamsDef.deserialize(val) : null },
+		set(val) { if(val) val = sheetParamsDef.serialize(val); this.setDataValue('params', val) }
 	}
 })
 

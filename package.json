@@ -1,6 +1,6 @@
 {
   "name": "@mysimpleapp/msa-sheet",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "MySimpleApp module offering the possibility to create WYSIWYG sheets",
   "main": "index.js",
   "scripts": {

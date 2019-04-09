@@ -2,6 +2,7 @@
 
 const path = require("path")
 const { SheetsDb } = require("./db")
+const { sheetParamsDef } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 const { Perm, permAdmin } = Msa.require("user")
 const perm = new Perm()
@@ -12,9 +13,9 @@ const { mdw:userMdw } = Msa.require("user")
 // class
 class MsaSheet extends Msa.Module {
 
-	constructor(dbKey){
+	constructor(dbKeyPrefix){
 		super()
-		this.dbKey = dbKey
+		this.dbKeyPrefix = dbKeyPrefix
 		this.initDb()
 		this.initApp()
 	}
@@ -23,8 +24,14 @@ class MsaSheet extends Msa.Module {
 		this.db = SheetsDb
 	}
 
-	getDbKey(key){
-		return this.dbKey + '-' + key
+	getDbKeyPrefix(req){
+		let dbKeyPrefix = deepGet(req, "sheetArgs", "dbKeyPrefix")
+		if(dbKeyPrefix === undefined) dbKeyPrefix = this.dbKeyPrefix
+		return dbKeyPrefix
+	}
+
+	buildDbKey(req, key){
+		return this.getDbKeyPrefix(req) + '-' + key
 	}
 
 	getDefaultContent(){
@@ -41,8 +48,19 @@ class MsaSheet extends Msa.Module {
 		return user ? user.name : req.connection.remoteAddress
 	}
 
-	getCreatePerm(){
-		return permAdmin
+	getPerm(permKey, req, sheet){
+		let perm = deepGet(req, "sheetArgs", "params", permKey)
+		if(perm === undefined) deepGet(sheet, "params", permKey)
+		if(perm === undefined) perm = sheetParamsDef.get(permKey).defVal
+		return perm
+	}
+
+	canRead(req, sheet){
+		return this.getPerm("readPerm", req, sheet).check(req.session.user)
+	}
+
+	canWrite(req, sheet){
+		return this.getPerm("writePerm", req, sheet).check(req.session.user)
 	}
 }
 const MsaSheetPt = MsaSheet.prototype
@@ -51,16 +69,19 @@ const MsaSheetPt = MsaSheet.prototype
 
 // get a sheet from DB
 MsaSheetPt.getSheet = async function(req, key) {
-	const dbKey = this.getDbKey(key)
+	const dbKey = this.buildDbKey(req, key)
 	const dbSheet = await SheetsDb.findOne({ where:{ key:dbKey }})
 	const sheet = (dbSheet !== null) ? {
-			owner: dbSheet.owner,
-			content: dbSheet.content,
-			editable: ( this.getUserKey(req) == dbSheet.owner )
+			content: {
+				head: dbSheet.contentHead,
+				body: dbSheet.contentBody
+			}
 		} : {
-			content: formatHtml(this.getDefaultContent()),
-			editable: this.getCreatePerm().check(req.session.user)
+			content: formatHtml(this.getDefaultContent())
 		}
+	if(!this.canRead(req, key, sheet))
+		throw Msa.FORBIDDEN
+	sheet.editable = this.canWrite(req, key, sheet)
 	return sheet
 }
 /*
@@ -166,23 +187,39 @@ var _createSheet3 = function(sheet, args, next) {
 
 // update a sheet in DB with updates
 MsaSheetPt.upsertSheet = async function(req, key, content) {
-	const dbKey = this.getDbKey(key)
-	const sheet = await SheetsDb.findOne({ where:{ key:dbKey }})
-	if(!sheet) await this.createSheet(req, key, content)
-	else await this.updateSheet(req, key, content)
+	const dbKey = this.buildDbKey(req, key)
+	const dbSheet = await SheetsDb.findOne({ where:{ key:dbKey }})
+	if(!dbSheet) await this.createSheet(req, key, content)
+	else await this.updateSheet(req, key, dbSheet, content)
 }
 
 MsaSheetPt.createSheet = async function(req, key, content) {
-	const dbKey = this.getDbKey(key)
-	const owner = this.getUserKey(req)
-	await SheetsDb.create(
-		{ key:dbKey, content:formatHtml(content), owner })
+	if(!this.canWrite(req, key, null))
+		throw Msa.FORBIDDEN
+	const dbKey = this.buildDbKey(req, key)
+	const fContent = formatHtml(content)
+	const user = this.getUserKey(req)
+	await SheetsDb.create({
+		key:dbKey,
+		contentHead: fContent.head,
+		contentBody: fContent.body,
+		createdBy: user,
+		updatedBy: user
+	})
 }
 
-MsaSheetPt.updateSheet = async function(req, key, content) {
-	const dbKey = this.getDbKey(key)
-	await SheetsDb.update(
-		{ content: formatHtml(content) },
+MsaSheetPt.updateSheet = async function(req, key, dbSheet, content) {
+	if(!this.canWrite(req, key, dbSheet))
+		throw Msa.FORBIDDEN
+	const dbKey = this.buildDbKey(req, key)
+	const fContent = formatHtml(content)
+	const user = this.getUserKey(req)
+	await dbSheet.update(
+		{
+			contentHead: fContent.head,
+			contentBody: fContent.body,
+			updatedBy: user
+		},
 		{ where: { key:dbKey }})
 }
 
@@ -694,6 +731,13 @@ const determineNewKeys = function(html) {
 	}
 }
 
+
+function deepGet(obj, key, ...args){
+	const obj2 = obj[key]
+	if(obj2 === undefined) return
+	if(args.length === 0) return obj2
+	return deepGet(obj2, ...args)
+}
 
 
 // default templates
