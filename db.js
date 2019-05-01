@@ -9,8 +9,8 @@ const SheetsDb = orm.define('msa_sheets', {
 	createdBy: Orm.STRING,
 	updatedBy: Orm.STRING,
 	params: { type: Orm.TEXT,
-		get() { const val = this.getDataValue('params'); return val ? sheetParamsDef.deserialize(val) : null },
-		set(val) { if(val) val = sheetParamsDef.serialize(val); this.setDataValue('params', val) }
+		get() { return sheetParamsDef.deserialize(this.getDataValue('params')) },
+		set(val) { this.setDataValue('params', sheetParamsDef.serialize(val)) }
 	}
 })
 
