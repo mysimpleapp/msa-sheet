@@ -2,13 +2,15 @@
 
 const path = require("path")
 const { SheetsDb } = require("./db")
+const { SheetPerm } = require("./perm")
 const { sheetParamsDef } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
-const { Perm, permAdmin } = Msa.require("user")
-const perm = new Perm()
 //const msaFs = Msa.require("fs")
 const formatHtml = Msa.formatHtml, parseHtml = Msa.parseHtml
 const { mdw:userMdw } = Msa.require("user")
+
+const defPerm = sheetParamsDef.get("perm").defVal
+const nullPerm = new SheetPerm()
 
 // class
 class MsaSheet extends Msa.Module {
@@ -25,9 +27,7 @@ class MsaSheet extends Msa.Module {
 	}
 
 	getDbKeyPrefix(req){
-		let dbKeyPrefix = deepGet(req, "sheetArgs", "dbKeyPrefix")
-		if(dbKeyPrefix === undefined) dbKeyPrefix = this.dbKeyPrefix
-		return dbKeyPrefix
+		return this.dbKeyPrefix
 	}
 
 	buildDbKey(req, key){
@@ -48,19 +48,19 @@ class MsaSheet extends Msa.Module {
 		return user ? user.name : req.connection.remoteAddress
 	}
 
-	getPerm(permKey, req, sheet){
-		let perm = deepGet(req, "sheetArgs", "params", permKey)
-		if(perm === undefined) deepGet(sheet, "params", permKey)
-		if(perm === undefined) perm = sheetParamsDef.get(permKey).defVal
-		return perm
+	checkPerm(req, sheet, expVal, prevVal) {
+		const perm = deepGet(sheet, "params", "perm")
+		if(perm) prevVal = perm.solve(req.session.user, prevVal)
+		if(prevVal!==undefined) return nullPerm.check(req.session.user, expVal, prevVal)
+		else return defPerm.check(req.session.user, expVal)
 	}
 
 	canRead(req, sheet){
-		return this.getPerm("readPerm", req, sheet).check(req.session.user)
+		return this.checkPerm(req, sheet, SheetPerm.READ)
 	}
 
 	canWrite(req, sheet){
-		return this.getPerm("writePerm", req, sheet).check(req.session.user)
+		return this.checkPerm(req, sheet, SheetPerm.WRITE)
 	}
 }
 const MsaSheetPt = MsaSheet.prototype

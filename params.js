@@ -1,12 +1,8 @@
 const { ParamsDef } = Msa.require("params")
-const { permPublic, permAdmin, PermParamDef } = Msa.require("user")
+const { newPermParamDef } = Msa.require("user")
+const { SheetPerm } = require("./perm")
 
 const sheetParamsDef = new ParamsDef()
-sheetParamsDef.add("readPerm", new PermParamDef({
-	defVal: permPublic
-}))
-sheetParamsDef.add("writePerm", new PermParamDef({
-	defVal: permAdmin
-}))
+sheetParamsDef.add("perm", newPermParamDef(SheetPerm, SheetPerm.READ))
  
 module.exports = { sheetParamsDef }
