@@ -4,7 +4,7 @@ import "/sheet/msa-sheet-templates.js"
 import { makeMovable } from "/utils/msa-utils-mover.js"
 import { makeResizable } from "/utils/msa-utils-resizer.js"
 import { popupFlexItemMenuFor } from "/utils/msa-utils-flex-item-menu.js"
-import { createPopup, createConfirmPopup } from "/utils/msa-utils-popup.js"
+import { addPopup, addConfirmPopup } from "/utils/msa-utils-popup.js"
 
 // style
 importHtml(`<style>
@@ -153,7 +153,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 
 		this.Q(".actTemplate").onclick = () => {
 			var target = this.target
-			var popup = createPopup("msa-sheet-templates")
+			var popup = addPopup(this, "msa-sheet-templates")
 			popup.onSelect = sheetTemplate => {
 				importHtml(sheetTemplate.html).then(newContents => {
 					var newContent = newContents[0]
@@ -170,7 +170,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 
 		this.Q(".actRemove").onclick = () => {
 			var target = this.target
-			createConfirmPopup("Are you sure to remove this element ?", () => {
+			addConfirmPopup(this, "Are you sure to remove this element ?", () => {
 				if(target.msaSheetEditor_el) target.msaSheetEditor_el.remove()
 				target.remove()
 			})
@@ -250,7 +250,7 @@ customElements.define("msa-sheet-show-style", HTMLMsaSheetShowStyleElement)
 // popup
 function createShowStylePopup() {
 	var target = MsaSheetEdition.selectedContent
-	var popup = createPopup("msa-sheet-show-style", {
+	var popup = addPopup(this, "msa-sheet-show-style", {
 		buttons: [{
 			text: "OK",
 			act: function() {

@@ -1,7 +1,7 @@
 import { Q, importHtml } from "/msa/msa.js"
 import "/sheet/msa-sheet-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
-import { createPopup } from "/utils/msa-utils-popup.js"
+import { addPopup } from "/utils/msa-utils-popup.js"
 
 // SVGs
 importHtml(`<svg id="msa-sheet-boxes-editor-svg" style="display:none">
@@ -60,7 +60,7 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 
 		this.Q(".actInsertNewContent").onclick = () => {
 			var menu = this
-			var popup = createPopup("msa-sheet-templates")
+			var popup = addPopup(this, "msa-sheet-templates")
 			popup.onSelect = function(sheetTemplate) {
 				menu.insertNewContent(menu.target, sheetTemplate)
 				popup.remove()

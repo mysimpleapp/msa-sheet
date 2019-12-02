@@ -1,6 +1,6 @@
 import { importHtml, ajax, Q } from "/msa/msa.js"
 import "/sheet/msa-sheet-generic-editor.js"
-import { createPopup } from "/utils/msa-utils-popup.js"
+import { addPopup, addInputPopup } from "/utils/msa-utils-popup.js"
 //import { postFile } from "/fs/msa-fs.js"
 //import "/fs/msa-fs-explorer.js"
 //import "/img/msa-img-selector.js"
@@ -274,10 +274,9 @@ export class HTMLMsaSheetTextEditor extends HTMLElement {
 		this.Q(".actStrikethrough").onclick = () => { document.execCommand('strikethrough', false) }
 		this.Q(".actRemoveFormat").onclick = () => { document.execCommand('formatBlock', false, 'div') }
 		this.Q(".actLink").onclick = () => {
-//		createLinkPopup.show()
 			var target = this.target
 			var sel = getSelection()
-			createInputPopup("Enter an URL:", {
+			addInputPopup(this, "Enter an URL:", {
 				onInput:function(val){
 					restoreSelection(sel)
 					document.execCommand("createLink", false, val)
@@ -354,7 +353,7 @@ export class HTMLMsaSheetTextEditor extends HTMLElement {
 			var type = sheet.getAttribute('type'), key = sheet.getAttribute('key')
 			var explorer = document.createElement("msa-fs-explorer")
 			explorer.setAttribute("base-url", "/sheet/"+type+'/'+key+'/attach')
-			createPopup(explorer)
+			addPopup(this, explorer)
 		}
 	}
 }
