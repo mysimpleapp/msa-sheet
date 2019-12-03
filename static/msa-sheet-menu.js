@@ -1,9 +1,9 @@
 import { importHtml, importOnCall, Q } from "/msa/msa.js"
 
-const editionUrl = { mod:"/sheet/msa-sheet-edition.js" }
-const editSheet = importOnCall(editionUrl, "MsaSheetEdition.editSheet")
-const saveSheet = importOnCall(editionUrl, "MsaSheetEdition.saveSheet")
-const cancelSheet = importOnCall(editionUrl, "MsaSheetEdition.cancelSheet")
+const editionSrc = "/sheet/msa-sheet-edition.js"
+const editSheet = importOnCall(editionSrc, "editSheet")
+const saveSheet = importOnCall(editionSrc, "saveSheet")
+const cancelSheet = importOnCall(editionSrc, "cancelSheet")
 
 importHtml(`<style>
 	msa-sheet-menu .buttons {
