@@ -170,7 +170,8 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 
 		this.Q(".actRemove").onclick = () => {
 			var target = this.target
-			addConfirmPopup(this, "Are you sure to remove this element ?", () => {
+			addConfirmPopup(this, "Are you sure to remove this element ?")
+			.then(() => {
 				if(target.msaSheetEditor_el) target.msaSheetEditor_el.remove()
 				target.remove()
 			})

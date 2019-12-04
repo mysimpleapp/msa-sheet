@@ -276,11 +276,10 @@ export class HTMLMsaSheetTextEditor extends HTMLElement {
 		this.Q(".actLink").onclick = () => {
 			var target = this.target
 			var sel = getSelection()
-			addInputPopup(this, "Enter an URL:", {
-				onInput:function(val){
-					restoreSelection(sel)
-					document.execCommand("createLink", false, val)
-				}
+			addInputPopup(this, "Enter an URL:")
+			.then(val => {
+				restoreSelection(sel)
+				document.execCommand("createLink", false, val)
 			})
 		}
 		this.Q(".actUnlink").onclick = () => { document.execCommand('unlink', false) }
