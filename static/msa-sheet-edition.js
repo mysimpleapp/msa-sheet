@@ -63,7 +63,8 @@ export function saveSheet(sheet) {
 			content: template.innerHTML
 		}
 	}
-	ajax('POST', baseUrl+'/_sheet/'+key, { body:body }, res => {
+	ajax('POST', baseUrl+'/_sheet/'+key, { body:body })
+	.then(res => {
 		// on update, rebuild sheet
 		updateSheetDomFromData(sheet, res)
 	})
@@ -160,13 +161,14 @@ function restoreOriginalHtmlAndCss(sheet) {
 
 // get sheet from server
 function getSheet(baseUrl, key, next) {
-	ajax('GET', baseUrl+'/_sheet/'+key, next)
+	ajax('GET', baseUrl+'/_sheet/'+key).then(next)
 }
 
 // get box types from server
 function getSheetTemplates(next) {
 	if(MsaSheetEdition.templates) return next && next()
-	ajax('GET', '/sheet/templates', res => {
+	ajax('GET', '/sheet/templates')
+	.then(res => {
 		MsaSheetEdition.templates = res
 		next && next()
 	})
