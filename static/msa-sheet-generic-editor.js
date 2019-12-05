@@ -1,4 +1,4 @@
-import { importHtml } from "/msa/msa.js"
+import { importHtml } from "/utils/msa-utils.js"
 
 importHtml(`<style>
 	msa-sheet-generic-editor ul {

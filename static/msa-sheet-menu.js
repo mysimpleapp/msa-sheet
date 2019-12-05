@@ -1,4 +1,4 @@
-import { importHtml, importOnCall, Q } from "/msa/msa.js"
+import { importHtml, importOnCall, Q } from "/utils/msa-utils.js"
 
 const editionSrc = "/sheet/msa-sheet-edition.js"
 const editSheet = importOnCall(editionSrc, "editSheet")

@@ -1,4 +1,4 @@
-import { importHtml, ajax } from "/msa/msa.js"
+import { importHtml, ajax } from "/utils/msa-utils.js"
 import "/sheet/msa-sheet-content-editor.js"
 
 const MsaSheetEdition = window.MsaSheetEdition = {}

@@ -1,4 +1,4 @@
-import { Q, importHtml } from "/msa/msa.js"
+import { Q, importHtml } from "/utils/msa-utils.js"
 import "/sheet/msa-sheet-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
 import { addPopup } from "/utils/msa-utils-popup.js"

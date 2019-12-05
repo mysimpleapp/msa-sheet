@@ -1,4 +1,4 @@
-import { importHtml, ajax } from "/msa/msa.js"
+import { importHtml, ajax } from "/utils/msa-utils.js"
 //import { HTMLMsaSheetMenuElement } from "/sheet/msa-sheet-menu.js"
 
 importHtml(`<style>

@@ -6,7 +6,7 @@ const { SheetPerm } = require("./perm")
 const { sheetParamsDef } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 //const msaFs = Msa.require("fs")
-const formatHtml = Msa.formatHtml, parseHtml = Msa.parseHtml
+const { formatHtml } = Msa.require("utils")
 const { mdw:userMdw } = Msa.require("user")
 
 const defPerm = sheetParamsDef.get("perm").defVal

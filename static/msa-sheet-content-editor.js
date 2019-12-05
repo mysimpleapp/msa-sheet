@@ -1,4 +1,4 @@
-import { importHtml, Q } from "/msa/msa.js"
+import { importHtml, Q } from "/utils/msa-utils.js"
 import "/sheet/msa-sheet-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
 import { makeMovable } from "/utils/msa-utils-mover.js"
