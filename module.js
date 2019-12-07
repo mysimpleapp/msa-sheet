@@ -3,6 +3,7 @@
 const path = require("path")
 const { SheetsDb } = require("./db")
 const { SheetPerm } = require("./perm")
+const { MsaParamsAdminLocalModule } = Msa.require("params")
 const { sheetParamsDef } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 //const msaFs = Msa.require("fs")
@@ -20,6 +21,7 @@ class MsaSheet extends Msa.Module {
 		this.dbKeyPrefix = dbKeyPrefix
 		this.initDb()
 		this.initApp()
+		this.initParams()
 	}
 
 	initDb(){
@@ -30,7 +32,7 @@ class MsaSheet extends Msa.Module {
 		return this.dbKeyPrefix
 	}
 
-	buildDbKey(req, key){
+	getDbKey(req, key){
 		return this.getDbKeyPrefix(req) + '-' + key
 	}
 
@@ -62,6 +64,26 @@ class MsaSheet extends Msa.Module {
 	canWrite(req, sheet){
 		return this.checkPerm(req, sheet, SheetPerm.WRITE)
 	}
+
+	// params
+
+	initParams(){
+		this.params = new MsaParamsAdminLocalModule({
+			paramDef: sheetParamsDef,
+			db: SheetsDb,
+			dbPkCols: ["key"]
+		})
+
+		this.app.use("/_params/:key",
+			userMdw,
+			(req, _res, next) => {
+				req.msaParamsArgs = {
+					dbPkVals: [ this.getDbKey(req, req.params.key) ]
+				}
+				next()
+			},
+			this.params.app)
+	}
 }
 const MsaSheetPt = MsaSheet.prototype
 
@@ -69,7 +91,7 @@ const MsaSheetPt = MsaSheet.prototype
 
 // get a sheet from DB
 MsaSheetPt.getSheet = async function(req, key) {
-	const dbKey = this.buildDbKey(req, key)
+	const dbKey = this.getDbKey(req, key)
 	const dbSheet = await SheetsDb.findOne({ where:{ key:dbKey }})
 	const sheet = (dbSheet !== null) ? {
 			content: {
@@ -187,7 +209,7 @@ var _createSheet3 = function(sheet, args, next) {
 
 // update a sheet in DB with updates
 MsaSheetPt.upsertSheet = async function(req, key, content) {
-	const dbKey = this.buildDbKey(req, key)
+	const dbKey = this.getDbKey(req, key)
 	const dbSheet = await SheetsDb.findOne({ where:{ key:dbKey }})
 	if(!dbSheet) await this.createSheet(req, key, content)
 	else await this.updateSheet(req, key, dbSheet, content)
@@ -196,7 +218,7 @@ MsaSheetPt.upsertSheet = async function(req, key, content) {
 MsaSheetPt.createSheet = async function(req, key, content) {
 	if(!this.canWrite(req, key, null))
 		throw Msa.FORBIDDEN
-	const dbKey = this.buildDbKey(req, key)
+	const dbKey = this.getDbKey(req, key)
 	const fContent = formatHtml(content)
 	const user = this.getUserKey(req)
 	await SheetsDb.create({
@@ -211,7 +233,7 @@ MsaSheetPt.createSheet = async function(req, key, content) {
 MsaSheetPt.updateSheet = async function(req, key, dbSheet, content) {
 	if(!this.canWrite(req, key, dbSheet))
 		throw Msa.FORBIDDEN
-	const dbKey = this.buildDbKey(req, key)
+	const dbKey = this.getDbKey(req, key)
 	const fContent = formatHtml(content)
 	const user = this.getUserKey(req)
 	await dbSheet.update(
