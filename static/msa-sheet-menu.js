@@ -9,20 +9,20 @@ const cancelSheet = importOnCall(editionSrc, "cancelSheet")
 
 
 importHtml(`<style>
-	msa-sheet-menu .buttons {
+	msa-sheet-menu > .inline-menu {
 		position: absolute;
 		top: 5px;
 		right: 5px;
 		z-index: 100;
 	}
-	msa-sheet-menu .icon {
+	msa-sheet-menu > .inline-menu input.icon {
 		padding: 5px;
 		outline: 0;
 		width: 24px;
 		height: 24px;
 		border-radius: 3pt;
 	}
-	msa-sheet-menu .icon:hover {
+	msa-sheet-menu > .inline-menu input.icon:hover {
 		background: white;
 		box-shadow: 1pt 1pt 3pt 1pt #aaa;
 		border-radius: 3pt;
@@ -31,14 +31,15 @@ importHtml(`<style>
 
 
 const template = `
-	<span class="buttons not-editing">
+	<span class="inline-menu not-editing">
 		<input class="icon edit" type="image" src='/utils/img/edit'>
 		<input class="icon config" type="image" src='/utils/img/config'>
 		</span>
-	<span class="buttons editing">
+	<span class="inline-menu editing">
 		<input class="icon save" type="image" src='/utils/img/save'>
 		<input class="icon cancel" type="image" src='/utils/img/cancel'>
 	</span>`
+
 
 export class HTMLMsaSheetMenuElement extends HTMLElement {
 
@@ -57,8 +58,8 @@ export class HTMLMsaSheetMenuElement extends HTMLElement {
 
 	sync() {
 		const sheet = this.sheet
-		this.Q(".buttons.editing").style.display = (sheet.isEditable() && sheet.editing) ? "" : "none"
-		this.Q(".buttons.not-editing").style.display = (sheet.isEditable() && !sheet.editing) ? "" : "none"
+		this.Q(".inline-menu.editing").style.display = (sheet.isEditable() && sheet.editing) ? "" : "none"
+		this.Q(".inline-menu.not-editing").style.display = (sheet.isEditable() && !sheet.editing) ? "" : "none"
 	}
 
 	initActions() {
@@ -96,4 +97,3 @@ export class HTMLMsaSheetMenuElement extends HTMLElement {
 }
 
 customElements.define("msa-sheet-menu", HTMLMsaSheetMenuElement)
-
