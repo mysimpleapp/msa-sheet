@@ -22,7 +22,7 @@ export function editSheet(sheet) {
 	}
 	// get sheet details
 	++nbLoading
-	getSheet(sheet.getBaseUrl(), sheet.getKey(), next)
+	getSheet(sheet.getBaseUrl(), sheet.getId(), next)
 	// get box types
 	++nbLoading
 	getSheetTemplates(next)
@@ -57,13 +57,13 @@ export function saveSheet(sheet) {
 	removeEditors(template.content)
 	// POST update
 	var baseUrl = sheet.getBaseUrl()
-	var key = sheet.getKey()
+	var id = sheet.getId()
 	var body = {
 		update: {
 			content: template.innerHTML
 		}
 	}
-	ajax('POST', baseUrl+'/_sheet/'+key, { body:body })
+	ajax('POST', baseUrl+'/_sheet/'+id, { body:body })
 	.then(res => {
 		// on update, rebuild sheet
 		updateSheetDomFromData(sheet, res)
@@ -160,8 +160,8 @@ function restoreOriginalHtmlAndCss(sheet) {
 }
 
 // get sheet from server
-function getSheet(baseUrl, key, next) {
-	ajax('GET', baseUrl+'/_sheet/'+key).then(next)
+function getSheet(baseUrl, id, next) {
+	ajax('GET', baseUrl+'/_sheet/'+id).then(next)
 }
 
 // get box types from server

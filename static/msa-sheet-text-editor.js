@@ -337,10 +337,10 @@ export class HTMLMsaSheetTextEditor extends HTMLElement {
 				selection.insertNode(img)
 			} else if(file) {
 				var sheet = getParentSheet(editor.target)
-				var sheetType = sheet.getAttribute('type'), sheetKey = sheet.getAttribute('key')
-				postFile(file, '/sheet/'+sheetType+'/'+sheetKey+'/attach/drafts/', function(metadatas) {
+				var sheetType = sheet.getAttribute('type'), sheetId = sheet.getAttribute('sheet-id')
+				postFile(file, '/sheet/'+sheetType+'/'+sheetId+'/attach/drafts/', function(metadatas) {
 					var filename = metadatas[0].name
-					img.src = '/sheet/'+sheetType+'/'+sheetKey+'/attach/'+filename
+					img.src = '/sheet/'+sheetType+'/'+sheetId+'/attach/'+filename
 					selection.insertNode(img)
 				})
 			}
@@ -349,9 +349,9 @@ export class HTMLMsaSheetTextEditor extends HTMLElement {
 		// attach
 		this.Q(".actShowAttachs").onclick = () => {
 			var sheet = getParentSheet(this.target)
-			var type = sheet.getAttribute('type'), key = sheet.getAttribute('key')
+			var type = sheet.getAttribute('type'), id = sheet.getAttribute('sheet-id')
 			var explorer = document.createElement("msa-fs-explorer")
-			explorer.setAttribute("base-url", "/sheet/"+type+'/'+key+'/attach')
+			explorer.setAttribute("base-url", "/sheet/"+type+'/'+id+'/attach')
 			addPopup(this, explorer)
 		}
 	}

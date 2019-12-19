@@ -3,7 +3,7 @@ const { orm, Orm } = Msa.require("db")
 const { sheetParamsDef } = require("./params")
 
 const SheetsDb = orm.define('msa_sheets', {
-	key: { type: Orm.STRING, primaryKey: true },
+	id: { type: Orm.STRING, primaryKey: true },
 	contentBody: Orm.TEXT,
 	contentHead: Orm.TEXT,
 	createdBy: Orm.STRING,

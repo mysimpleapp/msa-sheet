@@ -16,9 +16,9 @@ const nullPerm = new SheetPerm()
 // class
 class MsaSheet extends Msa.Module {
 
-	constructor(dbKeyPrefix){
+	constructor(dbIdPrefix){
 		super()
-		this.dbKeyPrefix = dbKeyPrefix
+		this.dbIdPrefix = dbIdPrefix
 		this.initDb()
 		this.initApp()
 		this.initParams()
@@ -28,12 +28,12 @@ class MsaSheet extends Msa.Module {
 		this.db = SheetsDb
 	}
 
-	getDbKeyPrefix(req){
-		return this.dbKeyPrefix
+	getDbIdPrefix(req){
+		return this.dbIdPrefix
 	}
 
-	getDbKey(req, key){
-		return this.getDbKeyPrefix(req) + '-' + key
+	getDbId(req, id){
+		return this.getDbIdPrefix(req) + '-' + id
 	}
 
 	getDefaultContent(){
@@ -45,7 +45,7 @@ class MsaSheet extends Msa.Module {
 		}
 	}
 
-	getUserKey(req){
+	getUserId(req){
 		const user = req.session ? req.session.user : null
 		return user ? user.name : req.connection.remoteAddress
 	}
@@ -71,14 +71,14 @@ class MsaSheet extends Msa.Module {
 		this.params = new MsaParamsAdminLocalModule({
 			paramDef: sheetParamsDef,
 			db: SheetsDb,
-			dbPkCols: ["key"]
+			dbPkCols: ["id"]
 		})
 
 		this.app.use("/_params/:key",
 			userMdw,
 			(req, _res, next) => {
 				req.msaParamsArgs = {
-					dbPkVals: [ this.getDbKey(req, req.params.key) ]
+					dbPkVals: [ this.getDbId(req, req.params.key) ]
 				}
 				next()
 			},
@@ -90,9 +90,9 @@ const MsaSheetPt = MsaSheet.prototype
 // get sheet //////////////////////////////////////////////////////////////////
 
 // get a sheet from DB
-MsaSheetPt.getSheet = async function(req, key) {
-	const dbKey = this.getDbKey(req, key)
-	const dbSheet = await SheetsDb.findOne({ where:{ key:dbKey }})
+MsaSheetPt.getSheet = async function(req, id) {
+	const dbId = this.getDbId(req, id)
+	const dbSheet = await SheetsDb.findOne({ where:{ id:dbId }})
 	const sheet = (dbSheet !== null) ? {
 			content: {
 				head: dbSheet.contentHead,
@@ -101,9 +101,9 @@ MsaSheetPt.getSheet = async function(req, key) {
 		} : {
 			content: formatHtml(this.getDefaultContent())
 		}
-	if(!this.canRead(req, key, sheet))
+	if(!this.canRead(req, id, sheet))
 		throw Msa.FORBIDDEN
-	sheet.editable = this.canWrite(req, key, sheet)
+	sheet.editable = this.canWrite(req, id, sheet)
 	return sheet
 }
 /*
@@ -208,21 +208,21 @@ var _createSheet3 = function(sheet, args, next) {
 // update sheet //////////////////////////////////////////////////////////////////
 
 // update a sheet in DB with updates
-MsaSheetPt.upsertSheet = async function(req, key, content) {
-	const dbKey = this.getDbKey(req, key)
-	const dbSheet = await SheetsDb.findOne({ where:{ key:dbKey }})
-	if(!dbSheet) await this.createSheet(req, key, content)
-	else await this.updateSheet(req, key, dbSheet, content)
+MsaSheetPt.upsertSheet = async function(req, id, content) {
+	const dbId = this.getDbId(req, id)
+	const dbSheet = await SheetsDb.findOne({ where:{ id:dbId }})
+	if(!dbSheet) await this.createSheet(req, id, content)
+	else await this.updateSheet(req, id, dbSheet, content)
 }
 
-MsaSheetPt.createSheet = async function(req, key, content) {
-	if(!this.canWrite(req, key, null))
+MsaSheetPt.createSheet = async function(req, id, content) {
+	if(!this.canWrite(req, id, null))
 		throw Msa.FORBIDDEN
-	const dbKey = this.getDbKey(req, key)
+	const dbId = this.getDbId(req, id)
 	const fContent = formatHtml(content)
-	const user = this.getUserKey(req)
+	const user = this.getUserId(req)
 	await SheetsDb.create({
-		key:dbKey,
+		id:dbId,
 		contentHead: fContent.head,
 		contentBody: fContent.body,
 		createdBy: user,
@@ -230,19 +230,19 @@ MsaSheetPt.createSheet = async function(req, key, content) {
 	})
 }
 
-MsaSheetPt.updateSheet = async function(req, key, dbSheet, content) {
-	if(!this.canWrite(req, key, dbSheet))
+MsaSheetPt.updateSheet = async function(req, id, dbSheet, content) {
+	if(!this.canWrite(req, id, dbSheet))
 		throw Msa.FORBIDDEN
-	const dbKey = this.getDbKey(req, key)
+	const dbId = this.getDbId(req, id)
 	const fContent = formatHtml(content)
-	const user = this.getUserKey(req)
+	const user = this.getUserId(req)
 	await dbSheet.update(
 		{
 			contentHead: fContent.head,
 			contentBody: fContent.body,
 			updatedBy: user
 		},
-		{ where: { key:dbKey }})
+		{ where: { id:dbId }})
 }
 
 
@@ -440,11 +440,11 @@ var checkEditSheetPerm = function(user, sheet, updKey) {
 
 var sheetHead = formatHtml({ wel:"/sheet/msa-sheet.js" }).head
 
-MsaSheetPt.renderSheetAsHtml = function(sheet, baseUrl, key) {
+MsaSheetPt.renderSheetAsHtml = function(sheet, baseUrl, id) {
 	const content = sheet.content
 	return {
 		head: sheetHead + content.head,
-		body: "<msa-sheet base-url='"+baseUrl+"' key='"+key+"' editable='"+sheet.editable+"'>"+content.body+"</msa-sheet>"
+		body: "<msa-sheet base-url='"+baseUrl+"' sheet-id='"+id+"' editable='"+sheet.editable+"'>"+content.body+"</msa-sheet>"
 	}
 }
 
@@ -612,20 +612,20 @@ var getHeads = function(htmlObj) {
 
 MsaSheetPt.initApp = function(){
 
-	this.app.get('/_sheet/:key', userMdw, async (req, res, next) => {
+	this.app.get('/_sheet/:id', userMdw, async (req, res, next) => {
 		try {
-			const { key } = req.params
-			const sheet = await this.getSheet(req, key)
+			const { id } = req.params
+			const sheet = await this.getSheet(req, id)
 			res.json(sheet)
 		} catch(err) { next(err) }
 	})
 
-	this.app.post('/_sheet/:key', userMdw, async (req, res, next) => {
+	this.app.post('/_sheet/:id', userMdw, async (req, res, next) => {
 		try {
-			const { key } = req.params
+			const { id } = req.params
 			const { update } = req.body
 		//if(!checkArgs(body, ['update'], next)) return
-			await this.upsertSheet(req, key, { body: update.content })
+			await this.upsertSheet(req, id, { body: update.content })
 			res.sendStatus(200)
 		} catch(err) { next(err) }
 	})
@@ -715,7 +715,7 @@ const replyJson = function(res, next){
 		res.json(data)
 	}
 }
-
+/*
 const getHtmlByKey = function(html) {
 	var keys = {}
 	_getHtmlByKey1(html, keys)
@@ -738,8 +738,9 @@ const _getHtmlByKey1 = function(html, keys) {
 		_getHtmlByKey1(html.content, keys)
 	}
 }
-
+*/
 // transform keys starting with "new" by true value
+/*
 const determineNewKeys = function(html) {
 	var idx = 0
 	var htmlByKey = getHtmlByKey(html)
@@ -752,6 +753,7 @@ const determineNewKeys = function(html) {
 		newBox.attrs['msa-sheet-key'] = idx.toString()
 	}
 }
+*/
 
 
 function deepGet(obj, key, ...args){

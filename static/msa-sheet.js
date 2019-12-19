@@ -22,8 +22,8 @@ export class HTMLMsaSheetElement extends HTMLElement {
 	getBaseUrl(){
 		return this.getAttribute("base-url")
 	}
-	getKey(){
-		return this.getAttribute("key")
+	getId(){
+		return this.getAttribute("sheet-id")
 	}
 	isEditable(){
 		return (this.getAttribute("editable")=="true")
@@ -35,7 +35,7 @@ export class HTMLMsaSheetElement extends HTMLElement {
 	async connectedCallback(){
 		this.editing = false
 		if(this.toFetch()){
-			const sheet = await ajax("GET", `${this.getBaseUrl()}/_sheet/${this.getKey()}`)
+			const sheet = await ajax("GET", `${this.getBaseUrl()}/_sheet/${this.getId()}`)
 			importHtml(sheet.content, this)
 			this.setAttribute("editable", sheet.editable)
 		}
