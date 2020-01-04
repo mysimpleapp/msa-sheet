@@ -4,14 +4,11 @@ const path = require("path")
 const { SheetsDb } = require("./db")
 const { SheetPerm } = require("./perm")
 const { MsaParamsAdminLocalModule } = Msa.require("params")
-const { sheetParamsDef } = require("./params")
+const { SheetParamDict } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 //const msaFs = Msa.require("fs")
 const { formatHtml } = Msa.require("utils")
 const { mdw:userMdw } = Msa.require("user")
-
-const defPerm = sheetParamsDef.get("perm").defVal
-const nullPerm = new SheetPerm()
 
 // class
 class MsaSheet extends Msa.Module {
@@ -51,17 +48,15 @@ class MsaSheet extends Msa.Module {
 	}
 
 	checkPerm(req, sheet, expVal, prevVal) {
-		const perm = deepGet(sheet, "params", "perm")
-		if(perm) prevVal = perm.solve(req.session.user, prevVal)
-		if(prevVal!==undefined) return nullPerm.check(req.session.user, expVal, prevVal)
-		else return defPerm.check(req.session.user, expVal)
+		const perm = deepGet(sheet, "params", "perm").get()
+		return perm.check(req.session.user, expVal, prevVal)
 	}
 
-	canRead(req, sheet){
+	canRead(req, id, sheet){
 		return this.checkPerm(req, sheet, SheetPerm.READ)
 	}
 
-	canWrite(req, sheet){
+	canWrite(req, id, sheet){
 		return this.checkPerm(req, sheet, SheetPerm.WRITE)
 	}
 
@@ -69,7 +64,7 @@ class MsaSheet extends Msa.Module {
 
 	initParams(){
 		this.params = new MsaParamsAdminLocalModule({
-			paramDef: sheetParamsDef,
+			paramCls: SheetParamDict,
 			db: SheetsDb,
 			dbPkCols: ["id"]
 		})
@@ -97,9 +92,11 @@ MsaSheetPt.getSheet = async function(req, id) {
 			content: {
 				head: dbSheet.contentHead,
 				body: dbSheet.contentBody
-			}
+			},
+			params: dbSheet.params
 		} : {
-			content: formatHtml(this.getDefaultContent())
+			content: formatHtml(this.getDefaultContent()),
+			params: new SheetParamDict()
 		}
 	if(!this.canRead(req, id, sheet))
 		throw Msa.FORBIDDEN

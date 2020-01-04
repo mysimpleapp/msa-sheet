@@ -1,7 +1,11 @@
-const { ParamsDef } = Msa.require("params")
+const { ParamDict } = Msa.require("params")
 const { SheetPerm } = require("./perm")
 
-const sheetParamsDef = new ParamsDef()
-sheetParamsDef.add("perm", SheetPerm.newPermParamDef({ group:"all", value:SheetPerm.READ }))
+class SheetParamDict extends ParamDict {
+    constructor(){
+        super()
+        this.perm = SheetPerm.newParam()
+    }
+}
  
-module.exports = { sheetParamsDef }
+module.exports = { SheetParamDict }

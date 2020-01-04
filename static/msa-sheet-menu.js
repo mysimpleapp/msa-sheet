@@ -78,8 +78,9 @@ export class HTMLMsaSheetMenuElement extends HTMLElement {
 	popupConfig(){
 		import("/params/msa-params-admin.js")
 		const paramsEl = document.createElement("msa-params-admin")
+		const baseUrl = this.sheet.getAttribute("base-url")
 		const id = this.sheet.getAttribute("sheet-id")
-		paramsEl.setAttribute("base-url", `/sheet/_params/${id}`)
+		paramsEl.setAttribute("base-url", `${baseUrl}/_params/${id}`)
 		addPopup(this, paramsEl)
 	}
 

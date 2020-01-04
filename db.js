@@ -1,6 +1,6 @@
 // DB model
 const { orm, Orm } = Msa.require("db")
-const { sheetParamsDef } = require("./params")
+const { SheetParamDict } = require("./params")
 
 const SheetsDb = orm.define('msa_sheets', {
 	id: { type: Orm.STRING, primaryKey: true },
@@ -9,8 +9,8 @@ const SheetsDb = orm.define('msa_sheets', {
 	createdBy: Orm.STRING,
 	updatedBy: Orm.STRING,
 	params: { type: Orm.TEXT,
-		get() { return sheetParamsDef.deserialize(this.getDataValue('params')) },
-		set(val) { this.setDataValue('params', sheetParamsDef.serialize(val)) }
+		get() { return SheetParamDict.newFromDbVal(this.getDataValue('params')) },
+		set(val) { console.log("TMP", val); if(val) this.setDataValue('params', val.getAsDbVal()) }
 	}
 })
 
