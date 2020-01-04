@@ -3,7 +3,7 @@
 const path = require("path")
 const { SheetsDb } = require("./db")
 const { SheetPerm } = require("./perm")
-const { MsaParamsAdminLocalModule } = Msa.require("params")
+const { MsaParamsAdminModule } = Msa.require("params")
 const { SheetParamDict } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 //const msaFs = Msa.require("fs")
@@ -63,18 +63,29 @@ class MsaSheet extends Msa.Module {
 	// params
 
 	initParams(){
-		this.params = new MsaParamsAdminLocalModule({
-			paramCls: SheetParamDict,
-			db: SheetsDb,
-			dbPkCols: ["id"]
-		})
 
-		this.app.use("/_params/:key",
+		this.params = new class extends MsaParamsAdminModule {
+
+			async getRootParam(req){
+				const row = (await SheetsDb.findOne({
+					attributes: [ "params" ],
+					where: { "id": req.sheetParamsArgs.id }}))
+				const param = row ? row["params"] : (new SheetParamDict())
+				return param
+			}
+		
+			async updateParamInDb(req, id, rootParam, param){
+				await SheetsDb.update(
+					{ params: rootParam },
+					{ where: { "id": req.sheetParamsArgs.id }})
+			}
+		}
+
+		this.app.use("/_params/:id",
 			userMdw,
 			(req, _res, next) => {
-				req.msaParamsArgs = {
-					dbPkVals: [ this.getDbId(req, req.params.key) ]
-				}
+				req.sheetParamsArgs = {
+					id: this.getDbId(req, req.params.id)}
 				next()
 			},
 			this.params.app)
