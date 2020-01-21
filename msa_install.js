@@ -1,6 +1,11 @@
-module.exports = async itf => {
-	// create table in DB
-	const { SheetsDb } = require("./db")
-	await SheetsDb.sync()
-}
-
+module.exports = itf => Msa.require('db').withDb(async db => {
+	await db.run(
+	`CREATE TABLE IF NOT EXISTS msa_sheets (
+		id VARCHAR(255) PRIMARY KEY,
+		contentBody TEXT,
+		contentHead TEXT,
+		createdBy VARCHAR(255),
+		updatedBy VARCHAR(255),
+		params TEXT
+	)`)
+})

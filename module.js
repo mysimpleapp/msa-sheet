@@ -1,36 +1,31 @@
 // requires
 
 const path = require("path")
-const { SheetsDb } = require("./db")
+const { withDb } = Msa.require("db")
+const { Sheet } = require('./model')
 const { SheetPerm } = require("./perm")
 const { MsaParamsAdminModule } = Msa.require("params")
-const { SheetParamDict } = require("./params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 //const msaFs = Msa.require("fs")
 const { formatHtml } = Msa.require("utils")
-const { mdw:userMdw } = Msa.require("user")
+const { userMdw } = Msa.require("user")
 
 // class
 class MsaSheet extends Msa.Module {
 
-	constructor(dbIdPrefix){
+	constructor(){
 		super()
-		this.dbIdPrefix = dbIdPrefix
-		this.initDb()
+		this.initDeps()
 		this.initApp()
 		this.initParams()
 	}
 
-	initDb(){
-		this.db = SheetsDb
+	initDeps(){
+		this.Sheet = Sheet
 	}
 
-	getDbIdPrefix(req){
-		return this.dbIdPrefix
-	}
-
-	getDbId(req, id){
-		return this.getDbIdPrefix(req) + '-' + id
+	getId(ctx, reqId){
+		return reqId
 	}
 
 	getDefaultContent(){
@@ -42,42 +37,110 @@ class MsaSheet extends Msa.Module {
 		}
 	}
 
-	getUserId(req){
-		const user = req.session ? req.session.user : null
-		return user ? user.name : req.connection.remoteAddress
+	getUserId(ctx){
+		const user = ctx.user
+		return user ? user.name : ctx.connection.remoteAddress
 	}
 
-	checkPerm(req, sheet, expVal, prevVal) {
+	checkPerm(ctx, sheet, expVal, prevVal) {
 		const perm = deepGet(sheet, "params", "perm").get()
-		return perm.check(req.session.user, expVal, prevVal)
+		return perm.check(ctx.user, expVal, prevVal)
 	}
 
-	canRead(req, id, sheet){
-		return this.checkPerm(req, sheet, SheetPerm.READ)
+	canRead(ctx, sheet){
+		return this.checkPerm(ctx, sheet, SheetPerm.READ)
 	}
 
-	canWrite(req, id, sheet){
-		return this.checkPerm(req, sheet, SheetPerm.WRITE)
+	canWrite(ctx, sheet){
+		return this.checkPerm(ctx, sheet, SheetPerm.WRITE)
+	}
+
+	initApp(){
+
+		this.app.get('/_sheet/:id', userMdw, (req, res, next) => {
+			withDb(async db => {
+				const ctx = newCtx(req, { db })
+				const { id } = req.params
+				const sheet = await this.getSheet(ctx, id)
+				res.json(sheet)
+			}).catch(next)
+		})
+
+		this.app.post('/_sheet/:id', userMdw, (req, res, next) => {
+			withDb(async db => {
+				const ctx = newCtx(req, { db })
+				const { id } = req.params
+				const { update } = req.body
+				const sheet = await this.getSheet(ctx, id)
+				sheet.content = formatHtml({ body: update.content })
+				await this.upsertSheetInDb(ctx, sheet)
+				res.sendStatus(200)
+			}).catch(next)
+		})
+
+		this.app.get('/templates', (req, res, next) => {
+			res.json(Templates)
+		})
+	}
+
+	async getSheet(ctx, id){
+		const dbSheet = await ctx.db.getOne("SELECT id, contentBody, contentHead, createdBy, updatedBy, params FROM msa_sheets WHERE id=:id",
+			{ id })
+		const sheet = this.Sheet.newFromDb(id, dbSheet)
+		if(!dbSheet) sheet.content = formatHtml(this.getDefaultContent())
+		if(!this.canRead(ctx, sheet))
+			throw Msa.FORBIDDEN
+		sheet.editable = this.canWrite(ctx, sheet)
+		return sheet
+	}
+
+
+	async upsertSheetInDb(ctx, sheet) {
+		if(!(await this.updateSheetInDb(ctx, sheet)))
+			await this.createSheetInDb(ctx, sheet)
+	}
+
+	async createSheetInDb(ctx, sheet) {
+		if(!this.canWrite(ctx, sheet))
+			throw Msa.FORBIDDEN
+		const user = this.getUserId(ctx)
+		sheet.createdBy = user
+		sheet.updatedBy = user
+		await ctx.db.run("INSERT INTO msa_sheets (id, contentBody, contentHead, createdBy, updatedBy) VALUES (:id, :contentBody, :contentHead, :createdBy, :updatedBy)",
+			sheet.formatForDb(["id","contentHead","contentBody","createdBy","updatedBy"]))
+	}
+
+	async updateSheetInDb(ctx, sheet) {
+		if(!this.canWrite(ctx, sheet))
+			throw Msa.FORBIDDEN
+		const user = this.getUserId(ctx)
+		sheet.updatedBy = user
+		const res = await ctx.db.run("UPDATE msa_sheets SET contentHead=:contentHead, contentBody=:contentBody, updatedBy=:updatedBy WHERE id=:id",
+			sheet.formatForDb(["id","contentHead","contentBody","updatedBy"]))
+		return res.nbChanges > 0
 	}
 
 	// params
 
 	initParams(){
 
+		const Sheet = this.Sheet
+
 		this.params = new class extends MsaParamsAdminModule {
 
-			async getRootParam(req){
-				const row = (await SheetsDb.findOne({
-					attributes: [ "params" ],
-					where: { "id": req.sheetParamsArgs.id }}))
-				const param = row ? row["params"] : (new SheetParamDict())
-				return param
+			async getRootParam(ctx){
+				const id = ctx.req.sheetParamsArgs.id
+				const dbSheet = await ctx.db.getOne("SELECT params FROM msa_sheets WHERE id=:id", {
+					id })
+				const sheet = Sheet.newFromDb(id, dbSheet)
+				return sheet.params
 			}
 		
-			async updateParamInDb(req, id, rootParam, param){
-				await SheetsDb.update(
-					{ params: rootParam },
-					{ where: { "id": req.sheetParamsArgs.id }})
+			async updateParamInDb(ctx){
+				await ctx.db.run("UPDATE msa_sheets SET params=:params WHERE id=:id", {
+					id: ctx.req.sheetParamsArgs.id,
+					params: rootParam.getAsDbVal()
+				})
 			}
 		}
 
@@ -85,7 +148,7 @@ class MsaSheet extends Msa.Module {
 			userMdw,
 			(req, _res, next) => {
 				req.sheetParamsArgs = {
-					id: this.getDbId(req, req.params.id)}
+					id: this.getId(req, req.params.id)}
 				next()
 			},
 			this.params.app)
@@ -96,8 +159,9 @@ const MsaSheetPt = MsaSheet.prototype
 // get sheet //////////////////////////////////////////////////////////////////
 
 // get a sheet from DB
+/*
 MsaSheetPt.getSheet = async function(req, id) {
-	const dbId = this.getDbId(req, id)
+	const dbId = this.getId(req, id)
 	const dbSheet = await SheetsDb.findOne({ where:{ id:dbId }})
 	const sheet = (dbSheet !== null) ? {
 			content: {
@@ -114,6 +178,7 @@ MsaSheetPt.getSheet = async function(req, id) {
 	sheet.editable = this.canWrite(req, id, sheet)
 	return sheet
 }
+*/
 /*
 MsaSheetPt.getSheet = function(key, args1, args2) {
 	// args
@@ -216,42 +281,6 @@ var _createSheet3 = function(sheet, args, next) {
 // update sheet //////////////////////////////////////////////////////////////////
 
 // update a sheet in DB with updates
-MsaSheetPt.upsertSheet = async function(req, id, content) {
-	const dbId = this.getDbId(req, id)
-	const dbSheet = await SheetsDb.findOne({ where:{ id:dbId }})
-	if(!dbSheet) await this.createSheet(req, id, content)
-	else await this.updateSheet(req, id, dbSheet, content)
-}
-
-MsaSheetPt.createSheet = async function(req, id, content) {
-	if(!this.canWrite(req, id, null))
-		throw Msa.FORBIDDEN
-	const dbId = this.getDbId(req, id)
-	const fContent = formatHtml(content)
-	const user = this.getUserId(req)
-	await SheetsDb.create({
-		id:dbId,
-		contentHead: fContent.head,
-		contentBody: fContent.body,
-		createdBy: user,
-		updatedBy: user
-	})
-}
-
-MsaSheetPt.updateSheet = async function(req, id, dbSheet, content) {
-	if(!this.canWrite(req, id, dbSheet))
-		throw Msa.FORBIDDEN
-	const dbId = this.getDbId(req, id)
-	const fContent = formatHtml(content)
-	const user = this.getUserId(req)
-	await dbSheet.update(
-		{
-			contentHead: fContent.head,
-			contentBody: fContent.body,
-			updatedBy: user
-		},
-		{ where: { id:dbId }})
-}
 
 
 /*
@@ -618,30 +647,6 @@ var getHeads = function(htmlObj) {
 
 // routes ////////////////////////////////////////////////////////////
 
-MsaSheetPt.initApp = function(){
-
-	this.app.get('/_sheet/:id', userMdw, async (req, res, next) => {
-		try {
-			const { id } = req.params
-			const sheet = await this.getSheet(req, id)
-			res.json(sheet)
-		} catch(err) { next(err) }
-	})
-
-	this.app.post('/_sheet/:id', userMdw, async (req, res, next) => {
-		try {
-			const { id } = req.params
-			const { update } = req.body
-		//if(!checkArgs(body, ['update'], next)) return
-			await this.upsertSheet(req, id, { body: update.content })
-			res.sendStatus(200)
-		} catch(err) { next(err) }
-	})
-
-	this.app.get('/templates', (req, res, next) => {
-		res.json(Templates)
-	})
-}
 
 // attachs
 /*
@@ -762,6 +767,12 @@ const determineNewKeys = function(html) {
 	}
 }
 */
+
+function newCtx(req, kwargs){
+	const ctx = Object.create(req)
+	Object.assign(ctx, kwargs)
+	return ctx
+}
 
 
 function deepGet(obj, key, ...args){
