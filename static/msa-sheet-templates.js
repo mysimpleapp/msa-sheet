@@ -29,26 +29,29 @@ importHtml(`<style>
 
 export class HTMLMsaSheetTemplatesElement extends HTMLElement {
 
-	connectedCallback(){
+	connectedCallback() {
 		this.renderSheetTemplates()
 	}
 
-	renderSheetTemplates(){
-		var templates = MsaSheetEdition.templates
-		for(var i=0, len=templates.length; i<len; ++i) {
-			var template = templates[i]
-			var button = document.createElement("span")
-			button.classList.add("button")
-			button.innerHTML = "<div class='img'>" + template.img + "</div>"
-			button.innerHTML += "<div class='title'>" + template.title + "</div>"
-			button.holder = this
-			button.template = template
-			button.addEventListener("click", () => {
-				var menu=this.holder, template=this.template
-				if(menu.onSelect) menu.onSelect(template)
-			})
-			this.appendChild(button)
+	renderSheetTemplates() {
+		const templates = MsaSheetEdition.templates
+		for (let i = 0, len = templates.length; i < len; ++i) {
+			const template = templates[i]
+			const but = this.newTemplateButton(template)
+			this.appendChild(but)
 		}
+	}
+
+	newTemplateButton(template) {
+		const button = document.createElement("span")
+		button.classList.add("button")
+		button.innerHTML = "<div class='img'>" + template.img + "</div>"
+		button.innerHTML += "<div class='title'>" + template.title + "</div>"
+		button.template = template
+		button.addEventListener("click", () => {
+			this.onSelect(template)
+		})
+		return button
 	}
 }
 

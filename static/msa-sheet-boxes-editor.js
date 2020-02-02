@@ -1,7 +1,7 @@
 import { Q, importHtml } from "/utils/msa-utils.js"
 import "/sheet/msa-sheet-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
-import { addPopup } from "/utils/msa-utils-popup.js"
+import { importAsPopup } from "/utils/msa-utils-popup.js"
 
 // SVGs
 importHtml(`<svg id="msa-sheet-boxes-editor-svg" style="display:none">
@@ -35,7 +35,7 @@ const content = `
 
 export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 
-	connectedCallback(){
+	connectedCallback() {
 		this.Q = Q
 		this.initContent()
 		this.initActions()
@@ -46,7 +46,7 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 		delete this.target
 	}
 
-	initContent(){
+	initContent() {
 		this.innerHTML = content
 	}
 
@@ -56,16 +56,15 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 		})
 	}
 
-	initActions(){
+	initActions() {
 
-		this.Q(".actInsertNewContent").onclick = () => {
-			var menu = this
-			var popup = addPopup(this, "msa-sheet-templates")
-			popup.onSelect = function(sheetTemplate) {
-				menu.insertNewContent(menu.target, sheetTemplate)
+		this.Q(".actInsertNewContent").onclick = async () => {
+			const popup = await importAsPopup(this, { wel: "/sheet/msa-sheet-templates.js" })
+			popup.content.onSelect = sheetTemplate => {
+				this.insertNewContent(this.target, sheetTemplate)
 				popup.remove()
 			}
-	}
+		}
 
 		this.Q(".actRangeSubBoxesAsColumns").onclick = () => {
 			var target = this.target

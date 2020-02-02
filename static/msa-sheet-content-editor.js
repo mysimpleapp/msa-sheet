@@ -3,8 +3,8 @@ import "/sheet/msa-sheet-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
 import { makeMovable } from "/utils/msa-utils-mover.js"
 import { makeResizable } from "/utils/msa-utils-resizer.js"
-import { popupFlexItemMenuFor } from "/utils/msa-utils-flex-item-menu.js"
-import { addPopup, addConfirmPopup } from "/utils/msa-utils-popup.js"
+import { popupFlexItemMenuFor } from "/utils/msa-utils-flex-item-menu.js"
+import { importAsPopup, addConfirmPopup } from "/utils/msa-utils-popup.js"
 
 // style
 importHtml(`<style>
@@ -90,15 +90,15 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 
 	linkTo(target) {
 		this.unlink()
-		if(!target) return
+		if (!target) return
 		this.target = target
 		// set this position
 		var pos = target.getBoundingClientRect()
-		this.style.top = max(10, (pos.top-50))+"px"
-		this.style.left = max(10, (pos.left+30))+"px"
+		this.style.top = max(10, (pos.top - 50)) + "px"
+		this.style.left = max(10, (pos.left + 30)) + "px"
 		// check if target has a specific edition menu
 		var targetEditor = target.getMsaSheetEditor()
-		if(targetEditor) {
+		if (targetEditor) {
 			// append target specific editor
 			importHtml(targetEditor, this)
 		}
@@ -111,13 +111,13 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		// add (de)select callbacks
 		target.addEventListener("select", selectCallback)
 		target.addEventListener("deselect", deselectCallback)
-		if(MsaSheetEdition.selectedBox !== target) deselectCallback.call(target)
-//		target.addEventListener("move", moveCallback)
+		if (MsaSheetEdition.selectedBox !== target) deselectCallback.call(target)
+		//		target.addEventListener("move", moveCallback)
 	}
 
 	unlink() {
 		var target = this.target
-		if(!target) return
+		if (!target) return
 		delete this.target
 		// remove target click listener
 		target.removeEventListener("mousedown", mouseDownSheetContentListener)
@@ -130,7 +130,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		// remove target callbacks
 		target.removeEventListener("select", selectCallback)
 		target.removeEventListener("deselect", deselectCallback)
-//		target.removeEventListener("move", moveCallback)
+		//		target.removeEventListener("move", moveCallback)
 	}
 
 	show() {
@@ -145,21 +145,18 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 
 		this.Q(".actBackgroundColor").onclick = (evt, input) => {
 			var target = this.target
-			inputColor.oninput = function() {
+			inputColor.oninput = function () {
 				target.style.background = this.value
 			}
 			inputColor.click()
 		}
 
-		this.Q(".actTemplate").onclick = () => {
-			var target = this.target
-			var popup = addPopup(this, "msa-sheet-templates")
-			popup.onSelect = sheetTemplate => {
-				importHtml(sheetTemplate.html).then(newContents => {
-					var newContent = newContents[0]
-					target.parentNode.replaceChild(newContent, target)
-					MsaSheetEdition.editSheetContent(newContent)
-				})
+		this.Q(".actTemplate").onclick = async () => {
+			const popup = await importAsPopup(this, { wel: "/sheet/msa-sheet-templates.js" })
+			popup.content.onSelect = async template => {
+				const newContent = (await importHtml(template.html))[0]
+				this.target.parentNode.replaceChild(newContent, this.target)
+				MsaSheetEdition.editSheetContent(newContent)
 				popup.remove()
 			}
 		}
@@ -171,55 +168,55 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		this.Q(".actRemove").onclick = () => {
 			var target = this.target
 			addConfirmPopup(this, "Are you sure to remove this element ?")
-			.then(() => {
-				if(target.msaSheetEditor_el) target.msaSheetEditor_el.remove()
-				target.remove()
-			})
+				.then(() => {
+					if (target.msaSheetEditor_el) target.msaSheetEditor_el.remove()
+					target.remove()
+				})
 		}
 
 		this.Q(".actFlexItemMenu").onclick = () => {
 			var target = this.target
-			if(target) popupFlexItemMenuFor(target)
+			if (target) popupFlexItemMenuFor(target)
 		}
 
 		this.Q(".actPositionInline").onclick = () => {
 			var target = this.target
-			if(target) MsaEdition.setPositionInline(target)
+			if (target) MsaEdition.setPositionInline(target)
 		}
 
 		this.Q(".actPositionFloat").onclick = () => {
 			var target = this.target
-			if(target) MsaEdition.setPositionFloat(target)
+			if (target) MsaEdition.setPositionFloat(target)
 		}
 	}
 }
 
 // callbacks
 
-function selectCallback(){
+function selectCallback() {
 	var mover = this.msaEditionMover
-	if(mover) mover.show()
+	if (mover) mover.show()
 	var resizer = this.msaEditionResizer
-	if(resizer) resizer.show()
+	if (resizer) resizer.show()
 	var flexItemMenu = this.msaEditionFlexItemMenu
-	if(flexItemMenu) flexItemMenu.show()
+	if (flexItemMenu) flexItemMenu.show()
 }
 
-function deselectCallback(){
+function deselectCallback() {
 	var mover = this.msaEditionMover
-	if(mover) mover.hide()
+	if (mover) mover.hide()
 	var resizer = this.msaEditionResizer
-	if(resizer) resizer.hide()
+	if (resizer) resizer.hide()
 	var flexItemMenu = this.msaEditionFlexItemMenu
-	if(flexItemMenu) flexItemMenu.hide()
+	if (flexItemMenu) flexItemMenu.hide()
 }
 
 // various
 
 function makeMovableIfApplicable(target) {
 	var computedStyle = window.getComputedStyle(target)
-	var pos = (computedStyle.position=="absolute") ? "float" : "inline"
-	makeMovable(target, pos=="float")
+	var pos = (computedStyle.position == "absolute") ? "float" : "inline"
+	makeMovable(target, pos == "float")
 }
 
 customElements.define("msa-sheet-content-editor", HTMLMsaSheetContentEditorElement)
@@ -241,7 +238,7 @@ export class HTMLMsaSheetShowStyleElement extends HTMLElement {
 
 	updateTarget() {
 		var target = this.target
-		if(target)
+		if (target)
 			target.style.cssText = this.Q('.cssText').value
 	}
 }
@@ -251,13 +248,13 @@ customElements.define("msa-sheet-show-style", HTMLMsaSheetShowStyleElement)
 // popup
 function createShowStylePopup() {
 	var target = MsaSheetEdition.selectedContent
-	var popup = addPopup(this, "msa-sheet-show-style", {
+	var popup = importAsPopup(this, { wel: "msa-sheet-show-style" }, {
 		buttons: [{
 			text: "OK",
-			act: function() {
+			act: function () {
 				this.updateTarget()
 			}
-		},{
+		}, {
 			text: "Cancel"
 		}]
 	})
@@ -267,36 +264,36 @@ function createShowStylePopup() {
 // box selection //////////////////////////////////
 
 var mouseDownSheetContent = null, mouseUpSheetContent = null
-var mouseDownSheetContentListener = function() {
-	if(mouseDownSheetContent===null)
+var mouseDownSheetContentListener = function () {
+	if (mouseDownSheetContent === null)
 		mouseDownSheetContent = this
 }
-var mouseUpSheetContentListener = function() {
-	if(mouseUpSheetContent===null)
+var mouseUpSheetContentListener = function () {
+	if (mouseUpSheetContent === null)
 		mouseUpSheetContent = this
 	else return
-	if(mouseDownSheetContent===mouseUpSheetContent)
+	if (mouseDownSheetContent === mouseUpSheetContent)
 		select(this)
 }
-document.addEventListener("click", function(){
+document.addEventListener("click", function () {
 	mouseDownSheetContent = null
 	mouseUpSheetContent = null
 })
-var select = function(target) {
-	if(MsaSheetEdition.selectedContent == target) return
+var select = function (target) {
+	if (MsaSheetEdition.selectedContent == target) return
 	deselect()
 	MsaSheetEdition.selectedContent = target
 	target.msaSheetEditor_el.show()
 	target.classList.add("selected")
 	target.dispatchEvent(new Event("select"))
 }
-var deselect = function(target) {
-	if(target===undefined) target=MsaSheetEdition.selectedContent
-	if(!target) return
-	if(target!=MsaSheetEdition.selectedContent) return
+var deselect = function (target) {
+	if (target === undefined) target = MsaSheetEdition.selectedContent
+	if (!target) return
+	if (target != MsaSheetEdition.selectedContent) return
 	MsaSheetEdition.selectedContent = null
 	var editor = target.msaSheetEditor_el
-	if(editor) editor.hide()
+	if (editor) editor.hide()
 	target.classList.remove("selected")
 	target.dispatchEvent(new Event("deselect"))
 }
