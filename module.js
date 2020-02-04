@@ -13,22 +13,22 @@ const { userMdw } = Msa.require("user")
 // class
 class MsaSheet extends Msa.Module {
 
-	constructor(){
+	constructor() {
 		super()
 		this.initDeps()
 		this.initApp()
 		this.initParams()
 	}
 
-	initDeps(){
+	initDeps() {
 		this.Sheet = Sheet
 	}
 
-	getId(ctx, reqId){
+	getId(ctx, reqId) {
 		return reqId
 	}
 
-	getDefaultContent(){
+	getDefaultContent() {
 		return {
 			tag: "msa-sheet-boxes",
 			content: {
@@ -37,7 +37,7 @@ class MsaSheet extends Msa.Module {
 		}
 	}
 
-	getUserId(ctx){
+	getUserId(ctx) {
 		const user = ctx.user
 		return user ? user.name : ctx.connection.remoteAddress
 	}
@@ -47,20 +47,20 @@ class MsaSheet extends Msa.Module {
 		return perm.check(ctx.user, expVal, prevVal)
 	}
 
-	canRead(ctx, sheet){
+	canRead(ctx, sheet) {
 		return this.checkPerm(ctx, sheet, SheetPerm.READ)
 	}
 
-	canWrite(ctx, sheet){
+	canWrite(ctx, sheet) {
 		return this.checkPerm(ctx, sheet, SheetPerm.WRITE)
 	}
 
-	initApp(){
+	initApp() {
 
 		this.app.get('/_sheet/:id', userMdw, (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
-				const { id } = req.params
+				const id = this.getId(ctx, req.params.id)
 				const sheet = await this.getSheet(ctx, id)
 				res.json(sheet)
 			}).catch(next)
@@ -69,7 +69,7 @@ class MsaSheet extends Msa.Module {
 		this.app.post('/_sheet/:id', userMdw, (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
-				const { id } = req.params
+				const id = this.getId(ctx, req.params.id)
 				const { update } = req.body
 				const sheet = await this.getSheet(ctx, id)
 				sheet.content = formatHtml({ body: update.content })
@@ -81,14 +81,16 @@ class MsaSheet extends Msa.Module {
 		this.app.get('/templates', (req, res, next) => {
 			res.json(Templates)
 		})
+
+		this.app.use(TemplatesRouter)
 	}
 
-	async getSheet(ctx, id){
+	async getSheet(ctx, id) {
 		const dbSheet = await ctx.db.getOne("SELECT id, contentBody, contentHead, createdBy, updatedBy, params FROM msa_sheets WHERE id=:id",
 			{ id })
 		const sheet = this.Sheet.newFromDb(id, dbSheet)
-		if(!dbSheet) sheet.content = formatHtml(this.getDefaultContent())
-		if(!this.canRead(ctx, sheet))
+		if (!dbSheet) sheet.content = formatHtml(this.getDefaultContent())
+		if (!this.canRead(ctx, sheet))
 			throw Msa.FORBIDDEN
 		sheet.editable = this.canWrite(ctx, sheet)
 		return sheet
@@ -96,47 +98,48 @@ class MsaSheet extends Msa.Module {
 
 
 	async upsertSheetInDb(ctx, sheet) {
-		if(!(await this.updateSheetInDb(ctx, sheet)))
+		if (!(await this.updateSheetInDb(ctx, sheet)))
 			await this.createSheetInDb(ctx, sheet)
 	}
 
 	async createSheetInDb(ctx, sheet) {
-		if(!this.canWrite(ctx, sheet))
+		if (!this.canWrite(ctx, sheet))
 			throw Msa.FORBIDDEN
 		const user = this.getUserId(ctx)
 		sheet.createdBy = user
 		sheet.updatedBy = user
 		await ctx.db.run("INSERT INTO msa_sheets (id, contentBody, contentHead, createdBy, updatedBy) VALUES (:id, :contentBody, :contentHead, :createdBy, :updatedBy)",
-			sheet.formatForDb(["id","contentHead","contentBody","createdBy","updatedBy"]))
+			sheet.formatForDb(["id", "contentHead", "contentBody", "createdBy", "updatedBy"]))
 	}
 
 	async updateSheetInDb(ctx, sheet) {
-		if(!this.canWrite(ctx, sheet))
+		if (!this.canWrite(ctx, sheet))
 			throw Msa.FORBIDDEN
 		const user = this.getUserId(ctx)
 		sheet.updatedBy = user
 		const res = await ctx.db.run("UPDATE msa_sheets SET contentHead=:contentHead, contentBody=:contentBody, updatedBy=:updatedBy WHERE id=:id",
-			sheet.formatForDb(["id","contentHead","contentBody","updatedBy"]))
+			sheet.formatForDb(["id", "contentHead", "contentBody", "updatedBy"]))
 		return res.nbChanges > 0
 	}
 
 	// params
 
-	initParams(){
+	initParams() {
 
 		const Sheet = this.Sheet
 
 		this.params = new class extends MsaParamsAdminModule {
 
-			async getRootParam(ctx){
+			async getRootParam(ctx) {
 				const id = ctx.req.sheetParamsArgs.id
 				const dbSheet = await ctx.db.getOne("SELECT params FROM msa_sheets WHERE id=:id", {
-					id })
+					id
+				})
 				const sheet = Sheet.newFromDb(id, dbSheet)
 				return sheet.params
 			}
-		
-			async updateParamInDb(ctx){
+
+			async updateParamInDb(ctx) {
 				await ctx.db.run("UPDATE msa_sheets SET params=:params WHERE id=:id", {
 					id: ctx.req.sheetParamsArgs.id,
 					params: rootParam.getAsDbVal()
@@ -148,7 +151,8 @@ class MsaSheet extends Msa.Module {
 			userMdw,
 			(req, _res, next) => {
 				req.sheetParamsArgs = {
-					id: this.getId(req, req.params.id)}
+					id: this.getId(req, req.params.id)
+				}
 				next()
 			},
 			this.params.app)
@@ -475,13 +479,13 @@ var checkEditSheetPerm = function(user, sheet, updKey) {
 
 // renderSheetAsHtml //////////////////////////////////////////////////////////////////
 
-var sheetHead = formatHtml({ wel:"/sheet/msa-sheet.js" }).head
+var sheetHead = formatHtml({ wel: "/sheet/msa-sheet.js" }).head
 
-MsaSheetPt.renderSheetAsHtml = function(sheet, baseUrl, id) {
+MsaSheetPt.renderSheetAsHtml = function (sheet, baseUrl, sheetId) {
 	const content = sheet.content
 	return {
 		head: sheetHead + content.head,
-		body: "<msa-sheet base-url='"+baseUrl+"' sheet-id='"+id+"' editable='"+sheet.editable+"'>"+content.body+"</msa-sheet>"
+		body: "<msa-sheet base-url='" + baseUrl + "' sheet-id='" + sheetId + "' editable='" + sheet.editable + "'>" + content.body + "</msa-sheet>"
 	}
 }
 
@@ -594,20 +598,25 @@ var registerType = MsaSheetPt.registerType = function(type, args) {
 */
 // templates
 var Templates = []
-var registerTemplate = MsaSheetPt.registerTemplate = function(title, html, args) {
-	if(!title || !html) return
+const TemplatesRouter = Msa.express.Router()
+var registerTemplate = MsaSheetPt.registerTemplate = function (key, html, args) {
+	if (!key || !html) return
 	var template = { html: formatHtml(html) }
 	// clone args into template
-	template.title = title
-	if(args) for(var a in args) template[a] = args[a]
+	if (args) for (var a in args) template[a] = args[a]
+	if (template.title) template.title = key
 	// default args
 	defArg(template, "img", defaultTemplateImg)
 	// insert in global map
 	Templates.push(template)
+	// add template module in router (if any)
+	if (template.mod) {
+		TemplatesRouter.use(key, template.mod.app)
+	}
 	// register head (if some, or if html is webelement)
-	var wel = (typeof html==="object") && (html.webelement || html.wel)
-	if(wel){
-		var head = template.head || html
+	var wel = (typeof html === "object") && (html.webelement || html.wel)
+	if (wel) {
+		var head = template.head || html
 		var tag = path.basename(wel, '.html')
 		registerHead(tag, head)
 	}
@@ -617,26 +626,26 @@ var defaultTemplateImg = "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22
 
 // head
 var Heads = {}
-var registerHead = MsaSheetPt.registerHead = function(tag, head) {
-	Heads[tag] = formatHtml({ head:head }).head
+var registerHead = MsaSheetPt.registerHead = function (tag, head) {
+	Heads[tag] = formatHtml({ head: head }).head
 }
 // browse html to determine associated heads
-var getHeads = function(htmlObj) {
+var getHeads = function (htmlObj) {
 	var heads = ""
 	var type = typeof htmlObj
-	if(type==="object") {
+	if (type === "object") {
 		// array
 		var len = htmlObj.length
-		if(len!==undefined) {
-			for(var i=0; i<len; ++i)
+		if (len !== undefined) {
+			for (var i = 0; i < len; ++i)
 				heads += getHeads(htmlObj[i])
 			return heads
 		}
 		// object
 		var tag = htmlObj.tag
-		if(tag) {
+		if (tag) {
 			var head = Heads[tag]
-			if(head) heads += head
+			if (head) heads += head
 		}
 		// recursive call on content
 		heads += getHeads(htmlObj.content)
@@ -696,23 +705,23 @@ var getAttachPath = function(type, key, file){
 // common //////////////////////////////////////////
 
 // get arg, with default value
-const getArg = function(args, attr, defaultVal) {
+const getArg = function (args, attr, defaultVal) {
 	var val = args[attr]
-	return (val===undefined) ? val : defaultVal
+	return (val === undefined) ? val : defaultVal
 }
 
 // set arg if not already defined
-const defArg = function(args, attr, val) {
-	if(args[attr]===undefined) args[attr] = val
+const defArg = function (args, attr, val) {
+	if (args[attr] === undefined) args[attr] = val
 }
 
 // check if args are defined
-const checkArgs = function(args, mandatoryArgs, next) {
-	for(var i=0, len=mandatoryArgs.length; i<len; ++i) {
+const checkArgs = function (args, mandatoryArgs, next) {
+	for (var i = 0, len = mandatoryArgs.length; i < len; ++i) {
 		var key = mandatoryArgs[i]
-		if(args[key]===undefined) {
-			var err = 'Missing mandatory argument "'+key+'"'
-			if(next) next(err)
+		if (args[key] === undefined) {
+			var err = 'Missing mandatory argument "' + key + '"'
+			if (next) next(err)
 			else throw new Error(err)
 			return false
 		}
@@ -720,11 +729,11 @@ const checkArgs = function(args, mandatoryArgs, next) {
 	return true
 }
 
-const emptyFun = function(){}
+const emptyFun = function () { }
 
-const replyJson = function(res, next){
-	return function(err, data){
-		if(err) return next(err)
+const replyJson = function (res, next) {
+	return function (err, data) {
+		if (err) return next(err)
 		res.json(data)
 	}
 }
@@ -768,17 +777,17 @@ const determineNewKeys = function(html) {
 }
 */
 
-function newCtx(req, kwargs){
+function newCtx(req, kwargs) {
 	const ctx = Object.create(req)
 	Object.assign(ctx, kwargs)
 	return ctx
 }
 
 
-function deepGet(obj, key, ...args){
+function deepGet(obj, key, ...args) {
 	const obj2 = obj[key]
-	if(obj2 === undefined) return
-	if(args.length === 0) return obj2
+	if (obj2 === undefined) return
+	if (args.length === 0) return obj2
 	return deepGet(obj2, ...args)
 }
 
@@ -786,10 +795,10 @@ function deepGet(obj, key, ...args){
 // default templates
 
 // no need to register the head of these web elements, as they are imported directly in msa-sheet.html
-registerTemplate("Text", {tag:"msa-sheet-text"}, {
+registerTemplate("Text", { tag: "msa-sheet-text" }, {
 	img: "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23999%22%20viewBox%3D%220%200%201024%201024%22%3E%3Cpath%20class%3D%22path1%22%20d%3D%22M896%200h-768c-17.664%200-32%2014.336-32%2032v192c0%2017.664%2014.336%2032%2032%2032h32c17.664%200%2032-14.336%2032-32l64-96h192v768l-160%2064c-17.664%200-32%2014.304-32%2032s14.336%2032%2032%2032h448c17.696%200%2032-14.304%2032-32s-14.304-32-32-32l-160-64v-768h192l64%2096c0%2017.664%2014.304%2032%2032%2032h32c17.696%200%2032-14.336%2032-32v-192c0-17.664-14.304-32-32-32z%22%3E%3C%2Fpath%3E%0A%3C%2Fsvg%3E'>"
 })
-registerTemplate("Boxes", {tag:"msa-sheet-boxes"}, {
+registerTemplate("Boxes", { tag: "msa-sheet-boxes" }, {
 	img: "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23999%22%20viewBox%3D%220%200%201024%201024%22%3E%3Cpath%20d%3D%22M896%200h-768c-70.4%200-128%2057.6-128%20128v768c0%2070.4%2057.6%20128%20128%20128h768c70.4%200%20128-57.6%20128-128v-768c0-70.4-57.6-128-128-128zM896%20896h-768v-768h768v768z%22%2F%3E%3C%2Fsvg%3E'>"
 })
 

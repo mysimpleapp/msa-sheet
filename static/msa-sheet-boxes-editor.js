@@ -50,10 +50,21 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 		this.innerHTML = content
 	}
 
-	insertNewContent(boxes, sheetTemplate) {
-		importHtml(sheetTemplate.html, boxes).then(newContents => {
-			MsaSheetEdition.editSheetContent(newContents)
-		})
+	async insertNewContent(sheetTemplate) {
+		let newContent
+		if (sheetTemplate.createFun) {
+			const createFun = (await import(sheetTemplate.createFun)).createSheetBox
+			const sheet = MsaSheetEdition.findParentSheet(this.target)
+			newContent = createFun(sheet)
+		} else if (sheetTemplate.html) {
+			newContent = (await importHtml(html))[0]
+		}
+		if (!newContent) {
+			console.warn("Could create sheet box")
+			return
+		}
+		this.target.appendChild(newContent)
+		MsaSheetEdition.editSheetContent(newContent)
 	}
 
 	initActions() {
@@ -61,7 +72,7 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 		this.Q(".actInsertNewContent").onclick = async () => {
 			const popup = await importAsPopup(this, { wel: "/sheet/msa-sheet-templates.js" })
 			popup.content.onSelect = sheetTemplate => {
-				this.insertNewContent(this.target, sheetTemplate)
+				this.insertNewContent(sheetTemplate)
 				popup.remove()
 			}
 		}
