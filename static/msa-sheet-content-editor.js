@@ -1,5 +1,5 @@
 import { importHtml, Q } from "/utils/msa-utils.js"
-import "/sheet/msa-sheet-generic-editor.js"
+import "/utils/msa-utils-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
 import { makeMovable } from "/utils/msa-utils-mover.js"
 import { makeResizable } from "/utils/msa-utils-resizer.js"
@@ -36,7 +36,7 @@ importHtml(`<svg id="msa-sheet-content-editor-svg" style="display:none">
 </svg>`, document.body)
 
 const content = `
-	<msa-sheet-generic-editor>
+	<msa-utils-generic-editor>
 		<ul>
 			<li><input type="image" src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23999%22%20viewBox%3D%220%200%201024%201024%22%3E%3Cpath%20d%3D%22M896%200h-768c-70.4%200-128%2057.6-128%20128v768c0%2070.4%2057.6%20128%20128%20128h768c70.4%200%20128-57.6%20128-128v-768c0-70.4-57.6-128-128-128zM896%20896h-768v-768h768v768z%22%2F%3E%3C%2Fsvg%3E'>
 				<ul>
@@ -55,7 +55,7 @@ const content = `
 			  </ul>
 			</li>
 		</ul>
-	</msa-sheet-generic-editor>`
+	</msa-utils-generic-editor>`
 
 const showStyleContent = `
 	cssText:<br>
@@ -97,11 +97,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		this.style.top = max(10, (pos.top - 50)) + "px"
 		this.style.left = max(10, (pos.left + 30)) + "px"
 		// check if target has a specific edition menu
-		var targetEditor = target.getMsaSheetEditor()
-		if (targetEditor) {
-			// append target specific editor
-			importHtml(targetEditor, this)
-		}
+		target.createMsaSheetEditor(this)
 		// on target click
 		target.addEventListener("mousedown", mouseDownSheetContentListener)
 		target.addEventListener("mouseup", mouseUpSheetContentListener)

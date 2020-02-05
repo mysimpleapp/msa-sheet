@@ -100,7 +100,7 @@ export function editSheetContent(el) {
 	// case dom
 	var editor = el.msaSheetEditor_el || null
 	if (!editor) {
-		if (el.getMsaSheetEditor) {
+		if (el.createMsaSheetEditor) {
 			editor = document.createElement("msa-sheet-content-editor")
 			document.body.appendChild(editor)
 			// link edition menu to dom

@@ -1,5 +1,5 @@
 import { Q, importHtml } from "/utils/msa-utils.js"
-import "/sheet/msa-sheet-generic-editor.js"
+import "/utils/msa-utils-generic-editor.js"
 import "/sheet/msa-sheet-templates.js"
 import { importAsPopup } from "/utils/msa-utils-popup.js"
 
@@ -21,7 +21,7 @@ importHtml(`<svg id="msa-sheet-boxes-editor-svg" style="display:none">
 
 // content
 const content = `
-	<msa-sheet-generic-editor>
+	<msa-utils-generic-editor>
 		<ul>
 			<li><svg class="actInsertNewContent"><use xlink:href="#msa-sheet-boxes-editor-add"></use></svg></li>
 			<li><svg><use xlink:href="#msa-sheet-boxes-editor-columns"></use></svg>
@@ -31,7 +31,7 @@ const content = `
 				</ul>
 			</li>
 	  </ul>
-	</msa-sheet-generic-editor>`
+	</msa-utils-generic-editor>`
 
 export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 
