@@ -51,9 +51,19 @@ customElements.define("msa-sheet", HTMLMsaSheetElement)
 
 // register editable element
 export class HTMLMsaSheetTextElement extends HTMLElement {
+	initContent() {
+		for (let c of this.children)
+			if (c.classList.contains("content"))
+				return c
+		const res = document.createElement("div")
+		res.classList.add("content")
+		res.style.flex = 1
+		this.appendChild(res)
+		return res
+	}
 	createMsaSheetEditor(editorParent) {
 		import('/utils/msa-utils-text-editor.js').then(mod => {
-			mod.makeTextEditable(this, { editor: editorParent })
+			mod.makeTextEditable(this.initContent(), { editor: editorParent })
 		})
 	}
 }
