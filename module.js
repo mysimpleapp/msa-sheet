@@ -4,7 +4,8 @@ const path = require("path")
 const { withDb } = Msa.require("db")
 const { Sheet } = require('./model')
 const { SheetPerm } = require("./perm")
-const { MsaParamsAdminModule } = Msa.require("params")
+const { SheetParamDict } = require("./params")
+const { MsaParamsLocalAdminModule } = Msa.require("params")
 //var msaDbFiles = Msa.require("msa-db", "files.js")
 //const msaFs = Msa.require("fs")
 const { formatHtml } = Msa.require("utils")
@@ -126,24 +127,26 @@ class MsaSheet extends Msa.Module {
 
 	initParams() {
 
-		const Sheet = this.Sheet
+		this.params = new class extends MsaParamsLocalAdminModule {
 
-		this.params = new class extends MsaParamsAdminModule {
-
-			async getRootParam(ctx) {
-				const id = ctx.req.sheetParamsArgs.id
-				const dbSheet = await ctx.db.getOne("SELECT params FROM msa_sheets WHERE id=:id", {
-					id
-				})
-				const sheet = Sheet.newFromDb(id, dbSheet)
-				return sheet.params
+			getParamDictClass() {
+				return SheetParamDict
 			}
 
-			async updateParamInDb(ctx) {
-				await ctx.db.run("UPDATE msa_sheets SET params=:params WHERE id=:id", {
-					id: ctx.req.sheetParamsArgs.id,
-					params: rootParam.getAsDbVal()
-				})
+			async selectRootParamFromDb(ctx) {
+				const res = await ctx.db.getOne("SELECT params FROM msa_sheets WHERE id=:id",
+					{ id: ctx.sheetParamsArgs.id })
+				return res.params
+			}
+
+			async updateRootParamInDb(ctx, dbVal) {
+				const vals = {
+					id: ctx.sheetParamsArgs.id,
+					params: dbVal
+				}
+				const res = await ctx.db.run("UPDATE msa_sheets SET params=:params WHERE id=:id", vals)
+				if (res.nbChanges === 0)
+					await ctx.db.run("INSERT INTO msa_sheets (id, params) VALUES (:id, :params)", vals)
 			}
 		}
 
