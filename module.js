@@ -127,22 +127,21 @@ class MsaSheet extends Msa.Module {
 
 	initParams() {
 
+		const Sheet = this.Sheet
+
 		this.params = new class extends MsaParamsLocalAdminModule {
 
-			getParamDictClass() {
-				return SheetParamDict
+			async getRootParam(ctx) {
+				const id = ctx.sheetParamsArgs.id
+				const dbRow = await ctx.db.getOne("SELECT params FROM msa_sheets WHERE id=:id",
+					{ id })
+				return Sheet.newFromDb(id, dbRow).params
 			}
 
-			async selectRootParamFromDb(ctx) {
-				const res = await ctx.db.getOne("SELECT params FROM msa_sheets WHERE id=:id",
-					{ id: ctx.sheetParamsArgs.id })
-				return res.params
-			}
-
-			async updateRootParamInDb(ctx, dbVal) {
+			async updateRootParam(ctx, rootParam) {
 				const vals = {
 					id: ctx.sheetParamsArgs.id,
-					params: dbVal
+					params: rootParam.getAsDbStr()
 				}
 				const res = await ctx.db.run("UPDATE msa_sheets SET params=:params WHERE id=:id", vals)
 				if (res.nbChanges === 0)
