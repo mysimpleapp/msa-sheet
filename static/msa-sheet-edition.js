@@ -1,4 +1,4 @@
-import { importHtml, ajax } from "/utils/msa-utils.js"
+import { importHtml, ajax, importObj } from "/utils/msa-utils.js"
 import "/sheet/msa-sheet-content-editor.js"
 
 const MsaSheetEdition = window.MsaSheetEdition = {}
@@ -10,28 +10,19 @@ importHtml(`<style>
 </style>`)
 
 // edit sheet
-export function editSheet(sheet) {
+export async function editSheet(sheet) {
 	// save original html & css
 	saveOriginalHtmlAndCss(sheet)
-	// waiter
-	var data = null, nbLoading = 0
-	var next = function (idata) {
-		if (idata) data = idata
-		if (--nbLoading > 0) return
-		editCallback(sheet, data)
-	}
-	// get sheet details
-	++nbLoading
-	getSheet(sheet.getBaseUrl(), sheet.getId(), next)
-	// get box types
-	++nbLoading
-	getSheetTemplates(next)
-}
-var editCallback = function (sheet, data) {
-	updateSheetDomFromData(sheet, data, function () {
-		// activate edition mode
-		_editSheet(sheet)
-	})
+
+	const [data, templates] = await Promise.all([
+		getSheet(sheet.getBaseUrl(), sheet.getId()),
+		getSheetBoxTemplates()])
+	await updateSheetDomFromData(sheet, data)
+	// activate edition mode
+	sheet.editing = true
+	sheet.classList.add("editing")
+	// content
+	editSheetContent(sheet)
 }
 MsaSheetEdition.editSheet = editSheet
 
@@ -45,24 +36,21 @@ export function cancelSheet(sheet) {
 MsaSheetEdition.cancelSheet = cancelSheet
 
 // save sheet
-export function saveSheet(sheet) {
+export async function saveSheet(sheet) {
 	// remove edition mode
 	_stopEditSheet(sheet)
 	// clear original html & css
 	clearOriginalHtmlAndCss(sheet)
 
-	// rebuild innerHTML, by removing msa-editors (in template to avoid triggering element callbacks)
-	var template = document.createElement("template")
-	template.innerHTML = sheet.innerHTML
-	removeEditors(template.content)
+	// export content
+	const tmpl = document.createElement("template")
+	tmpl.innerHTML = sheet.innerHTML
+	const content = await _exportChildBoxes(tmpl.content)
+
 	// POST update
 	var baseUrl = sheet.getBaseUrl()
 	var id = sheet.getId()
-	var body = {
-		update: {
-			content: template.innerHTML
-		}
-	}
+	var body = { content }
 	ajax('POST', baseUrl + '/_sheet/' + id, { body: body })
 		.then(res => {
 			// on update, rebuild sheet
@@ -71,24 +59,24 @@ export function saveSheet(sheet) {
 }
 MsaSheetEdition.saveSheet = saveSheet
 
-function removeEditors(el) {
-	// if editor remove
-	if (el.getAttribute && el.getAttribute("msa-editor") === "true") el.remove()
-	else {
-		// recursive call on children (clone to array, as some of element will be removed)
-		var children = Array.prototype.slice.call(el.children)
-		for (var i = 0, len = children.length; i < len; ++i)
-			removeEditors(children[i])
+async function _exportChildBoxes(el) {
+	const templates = await getSheetBoxTemplates()
+	const res = []
+	for (const c of el.children) {
+		const tagName = c.tagName.toLowerCase()
+		const template = templates[tagName.toLowerCase()]
+		if (template) {
+			let exportSheetBox
+			if (template.editionSrc)
+				exportSheetBox = (await importObj(template.editionSrc)).exportSheetBox
+			const r = exportSheetBox ? await asPrm(exportSheetBox(c)) : c.outerHTML
+			if (r) res.push(r)
+		}
 	}
+	return res
 }
 
 // editing
-function _editSheet(sheet) {
-	sheet.editing = true
-	sheet.classList.add("editing")
-	// content
-	editSheetContent(sheet)
-}
 export function editSheetContent(el) {
 	if (!el) return
 	// case array
@@ -160,30 +148,27 @@ function restoreOriginalHtmlAndCss(sheet) {
 }
 
 // get sheet from server
-function getSheet(baseUrl, id, next) {
-	ajax('GET', baseUrl + '/_sheet/' + id).then(next)
+function getSheet(baseUrl, id) {
+	return ajax('GET', baseUrl + '/_sheet/' + id)
 }
 
 // get box types from server
-function getSheetTemplates(next) {
-	if (MsaSheetEdition.templates) return next && next()
-	ajax('GET', '/sheet/templates')
-		.then(res => {
-			MsaSheetEdition.templates = res
-			next && next()
-		})
+let SheetBoxTemplatesPrm
+export async function getSheetBoxTemplates() {
+	if (SheetBoxTemplatesPrm === undefined) {
+		SheetBoxTemplatesPrm = ajax('GET', '/sheet/templates')
+	}
+	return SheetBoxTemplatesPrm
 }
 
 // update sheet dom from server data
-function updateSheetDomFromData(sheet, data, next) {
+async function updateSheetDomFromData(sheet, data) {
 	// innerHtml
 	if (data && data.innerHtml)
-		updateSheetHtml(sheet, data.innerHtml, next)
-	else
-		next && next()
+		await updateSheetHtml(sheet, data.innerHtml)
 }
 
-function updateSheetHtml(sheet, html, next) {
+async function updateSheetHtml(sheet, html) {
 	// duplicate children array, as it will be modified
 	var children = Array.prototype.slice.call(sheet.children)
 	// remove all sheet childs (except menu)
@@ -193,7 +178,7 @@ function updateSheetHtml(sheet, html, next) {
 			child.remove()
 	}
 	// import new innerHtml
-	importHtml(html, sheet).then(next)
+	await importHtml(html, sheet)
 }
 
 
@@ -208,3 +193,24 @@ function findParentSheet(el) {
 	}
 }
 MsaSheetEdition.findParentSheet = findParentSheet
+
+// native boxes edition
+
+export const MsaSheetBoxesEdition = {
+	exportSheetBox: async function (el) {
+		const attrs = {}
+		for (let a of el.attributes) if (a.nodeValue) attrs[a.nodeName] = a.nodeValue
+		return {
+			tag: "msa-sheet-boxes",
+			attrs,
+			content: await _exportChildBoxes(el)
+		}
+	}
+}
+
+// utils
+
+function asPrm(a) {
+	if (typeof a === "object" && a.then) return a
+	return new Promise((ok, ko) => ok(a))
+}

@@ -1,4 +1,4 @@
-import { Q, importHtml } from "/utils/msa-utils.js"
+import { Q, importHtml, importObj } from "/utils/msa-utils.js"
 import "/utils/msa-utils-dropdown-menu.js"
 import "/sheet/msa-sheet-templates.js"
 import { importAsPopup } from "/utils/msa-utils-popup.js"
@@ -50,20 +50,23 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 		this.innerHTML = content
 	}
 
-	async insertNewContent(sheetTemplate) {
-		let newContent
-		if (sheetTemplate.createFun) {
-			const createFun = (await import(sheetTemplate.createFun)).createSheetBox
-			const sheet = MsaSheetEdition.findParentSheet(this.target)
-			newContent = createFun(sheet)
-		} else if (sheetTemplate.html) {
-			newContent = (await importHtml(html))[0]
+	async insertNewContent(template) {
+		let html, createSheetBox
+		if (template.editionSrc) {
+			const editObj = await importObj(template.editionSrc)
+			createSheetBox = editObj.createSheetBox
 		}
-		if (!newContent) {
+		if (createSheetBox) {
+			const sheet = MsaSheetEdition.findParentSheet(this.target)
+			html = createSheetBox(sheet)
+		} else if (template.html) {
+			html = template.html
+		}
+		if (!html) {
 			console.warn("Could create sheet box")
 			return
 		}
-		this.target.appendChild(newContent)
+		const newContent = (await importHtml(html, this.target))[0]
 		MsaSheetEdition.editSheetContent(newContent)
 	}
 

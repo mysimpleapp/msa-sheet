@@ -1,4 +1,5 @@
 import { importHtml } from "/utils/msa-utils.js"
+import { getSheetBoxTemplates } from "/sheet/msa-sheet-edition.js"
 
 importHtml(`<style>
 	msa-sheet-templates .button {
@@ -30,14 +31,13 @@ importHtml(`<style>
 export class HTMLMsaSheetTemplatesElement extends HTMLElement {
 
 	connectedCallback() {
-		this.renderSheetTemplates()
+		this.renderSheetBoxTemplates()
 	}
 
-	renderSheetTemplates() {
-		const templates = MsaSheetEdition.templates
-		for (let i = 0, len = templates.length; i < len; ++i) {
-			const template = templates[i]
-			const but = this.newTemplateButton(template)
+	async renderSheetBoxTemplates() {
+		const templates = await getSheetBoxTemplates()
+		for (let key in templates) {
+			const but = this.newTemplateButton(templates[key])
 			this.appendChild(but)
 		}
 	}
@@ -48,9 +48,7 @@ export class HTMLMsaSheetTemplatesElement extends HTMLElement {
 		button.innerHTML = "<div class='img'>" + template.img + "</div>"
 		button.innerHTML += "<div class='title'>" + template.title + "</div>"
 		button.template = template
-		button.addEventListener("click", () => {
-			this.onSelect(template)
-		})
+		button.addEventListener("click", () => this.onSelect(template))
 		return button
 	}
 }

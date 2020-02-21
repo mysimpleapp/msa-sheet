@@ -71,9 +71,9 @@ class MsaSheet extends Msa.Module {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
 				const id = this.getId(ctx, req.params.id)
-				const { update } = req.body
+				const { content } = req.body
 				const sheet = await this.getSheet(ctx, id)
-				sheet.content = formatHtml({ body: update.content })
+				sheet.content = formatHtml({ body: content })
 				await this.upsertSheetInDb(ctx, sheet)
 				res.sendStatus(200)
 			}).catch(next)
@@ -83,7 +83,12 @@ class MsaSheet extends Msa.Module {
 			res.json(Templates)
 		})
 
-		this.app.use(TemplatesRouter)
+		this.app.use('/:id/box',
+			(req, res, next) => {
+				req.msaSheetArgs = { id: this.getId(null, req.params.id) }
+				next()
+			},
+			TemplatesRouter)
 	}
 
 	async getSheet(ctx, id) {
@@ -599,22 +604,22 @@ var registerType = MsaSheetPt.registerType = function(type, args) {
 }
 */
 // templates
-var Templates = []
+const Templates = {}
 const TemplatesRouter = Msa.express.Router()
-var registerTemplate = MsaSheetPt.registerTemplate = function (key, html, args) {
-	if (!key || !html) return
-	var template = { html: formatHtml(html) }
-	// clone args into template
-	if (args) for (var a in args) template[a] = args[a]
-	if (template.title) template.title = key
+const registerSheetBoxTemplate = MsaSheetPt.registerSheetBoxTemplate = function (tag, template) {
+	if (!template) template = {}
+	template.tag = tag
+	if (template.html)
+		template.html = formatHtml(template.html)
+	if (!template.title) template.title = tag
 	// default args
 	defArg(template, "img", defaultTemplateImg)
 	// insert in global map
-	Templates.push(template)
+	Templates[tag] = template
 	// add template module in router (if any)
-	if (template.mod) {
-		TemplatesRouter.use(key, template.mod.app)
-	}
+	if (template.mods)
+		for (let route in template.mods)
+			TemplatesRouter.use(route, template.mods[route].app)
 	// register head (if some, or if html is webelement)
 	var wel = (typeof html === "object") && (html.webelement || html.wel)
 	if (wel) {
@@ -797,13 +802,17 @@ function deepGet(obj, key, ...args) {
 // default templates
 
 // no need to register the head of these web elements, as they are imported directly in msa-sheet.html
-registerTemplate("Text", { tag: "msa-sheet-text" }, {
+registerSheetBoxTemplate("msa-sheet-text", {
+	title: "Text",
+	html: { tag: "msa-sheet-text" },
 	img: "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23999%22%20viewBox%3D%220%200%201024%201024%22%3E%3Cpath%20class%3D%22path1%22%20d%3D%22M896%200h-768c-17.664%200-32%2014.336-32%2032v192c0%2017.664%2014.336%2032%2032%2032h32c17.664%200%2032-14.336%2032-32l64-96h192v768l-160%2064c-17.664%200-32%2014.304-32%2032s14.336%2032%2032%2032h448c17.696%200%2032-14.304%2032-32s-14.304-32-32-32l-160-64v-768h192l64%2096c0%2017.664%2014.304%2032%2032%2032h32c17.696%200%2032-14.336%2032-32v-192c0-17.664-14.304-32-32-32z%22%3E%3C%2Fpath%3E%0A%3C%2Fsvg%3E'>"
 })
-registerTemplate("Boxes", { tag: "msa-sheet-boxes" }, {
+registerSheetBoxTemplate("msa-sheet-boxes", {
+	title: "Boxes",
+	html: { tag: "msa-sheet-boxes" },
+	editionSrc: "/sheet/msa-sheet-edition.js:MsaSheetBoxesEdition",
 	img: "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23999%22%20viewBox%3D%220%200%201024%201024%22%3E%3Cpath%20d%3D%22M896%200h-768c-70.4%200-128%2057.6-128%20128v768c0%2070.4%2057.6%20128%20128%20128h768c70.4%200%20128-57.6%20128-128v-768c0-70.4-57.6-128-128-128zM896%20896h-768v-768h768v768z%22%2F%3E%3C%2Fsvg%3E'>"
 })
 
 // export
 module.exports = MsaSheet
-
