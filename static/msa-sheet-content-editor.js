@@ -1,10 +1,11 @@
-import { importHtml, Q } from "/utils/msa-utils.js"
-import "/utils/msa-utils-dropdown-menu.js"
-import "/sheet/msa-sheet-templates.js"
+import { importHtml, importObj, Q } from "/utils/msa-utils.js"
 import { makeMovable } from "/utils/msa-utils-mover.js"
 import { makeResizable } from "/utils/msa-utils-resizer.js"
 import { popupFlexItemMenuFor } from "/utils/msa-utils-flex-item-menu.js"
 import { importAsPopup, addConfirmPopup } from "/utils/msa-utils-popup.js"
+import "/utils/msa-utils-dropdown-menu.js"
+import "/sheet/msa-sheet-templates.js"
+import { getSheetBoxTemplates } from "/sheet/msa-sheet-edition.js"
 
 // style
 importHtml(`<style>
@@ -88,7 +89,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		this.innerHTML = content
 	}
 
-	linkTo(target) {
+	async linkTo(target) {
 		this.unlink()
 		if (!target) return
 		this.target = target
@@ -97,7 +98,13 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		this.style.top = max(10, (pos.top - 50)) + "px"
 		this.style.left = max(10, (pos.left + 30)) + "px"
 		// check if target has a specific edition menu
-		target.createMsaSheetEditor(this)
+		//target.createMsaSheetEditor(this)
+		const templates = await getSheetBoxTemplates()
+		const template = templates[target.tagName.toLowerCase()]
+		if (template.editionSrc) {
+			const editSheetBox = (await importObj(template.editionSrc)).editSheetBox
+			if (editSheetBox) editSheetBox(target, this)
+		}
 		// on target click
 		target.addEventListener("mousedown", mouseDownSheetContentListener)
 		target.addEventListener("mouseup", mouseUpSheetContentListener)
@@ -165,7 +172,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 			var target = this.target
 			addConfirmPopup(this, "Are you sure to remove this element ?")
 				.then(() => {
-					if (target.msaSheetEditor_el) target.msaSheetEditor_el.remove()
+					if (target._msaSheetEditor) target._msaSheetEditor.remove()
 					target.remove()
 				})
 		}
@@ -279,7 +286,7 @@ var select = function (target) {
 	if (MsaSheetEdition.selectedContent == target) return
 	deselect()
 	MsaSheetEdition.selectedContent = target
-	target.msaSheetEditor_el.show()
+	target._msaSheetEditor.show()
 	target.classList.add("selected")
 	target.dispatchEvent(new Event("select"))
 }
@@ -288,7 +295,7 @@ var deselect = function (target) {
 	if (!target) return
 	if (target != MsaSheetEdition.selectedContent) return
 	MsaSheetEdition.selectedContent = null
-	var editor = target.msaSheetEditor_el
+	var editor = target._msaSheetEditor
 	if (editor) editor.hide()
 	target.classList.remove("selected")
 	target.dispatchEvent(new Event("deselect"))

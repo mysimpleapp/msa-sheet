@@ -69,28 +69,28 @@ export class HTMLMsaSheetMenuElement extends HTMLElement {
 		this.Q("input.cancel").onclick = () => this.cancel()
 	}
 
-	edit(){
+	edit() {
 		this.sheet.editing = true
 		this.sync()
 		editSheet(this.sheet)
 	}
 
-	popupConfig(){
+	popupConfig() {
 		import("/params/msa-params-admin.js")
 		const paramsEl = document.createElement("msa-params-admin")
 		const baseUrl = this.sheet.getAttribute("base-url")
 		const id = this.sheet.getAttribute("sheet-id")
-		paramsEl.setAttribute("base-url", `${baseUrl}/_params/${id}`)
+		paramsEl.setAttribute("base-url", `${baseUrl}/${id}/_params`)
 		addPopup(this, paramsEl)
 	}
 
-	save(){
+	save() {
 		this.sheet.editing = false
 		this.sync()
 		saveSheet(this.sheet)
 	}
 
-	cancel(){
+	cancel() {
 		this.sheet.editing = false
 		this.sync()
 		cancelSheet(this.sheet)

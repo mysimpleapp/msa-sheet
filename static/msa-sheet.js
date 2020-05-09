@@ -35,7 +35,7 @@ export class HTMLMsaSheetElement extends HTMLElement {
 	async connectedCallback() {
 		this.editing = false
 		if (this.toFetch()) {
-			const sheet = await ajax("GET", `${this.getBaseUrl()}/_sheet/${this.getId()}`)
+			const sheet = await ajax("GET", `${this.getBaseUrl()}/${this.getId()}`)
 			importHtml(sheet.content, this)
 			this.setAttribute("editable", sheet.editable)
 		}
@@ -61,18 +61,8 @@ export class HTMLMsaSheetTextElement extends HTMLElement {
 		this.appendChild(res)
 		return res
 	}
-	createMsaSheetEditor(editorParent) {
-		import('/utils/msa-utils-text-editor.js').then(mod => {
-			mod.makeTextEditable(this.initContent(), { editor: editorParent })
-		})
-	}
 }
 customElements.define("msa-sheet-text", HTMLMsaSheetTextElement)
 
-export class HTMLMsaSheetBoxesElement extends HTMLElement {
-	createMsaSheetEditor(editorParent) {
-		importHtml({ wel: '/sheet/msa-sheet-boxes-editor.js' }, editorParent)
-	}
-}
+export class HTMLMsaSheetBoxesElement extends HTMLElement { }
 customElements.define("msa-sheet-boxes", HTMLMsaSheetBoxesElement)
-

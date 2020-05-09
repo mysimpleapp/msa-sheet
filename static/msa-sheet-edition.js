@@ -13,8 +13,8 @@ importHtml(`<style>
 export async function editSheet(sheet) {
 	// save original html & css
 	saveOriginalHtmlAndCss(sheet)
-
-	const [data, templates] = await Promise.all([
+	// (box templates are get here only for a performance reason)
+	const [data, _] = await Promise.all([
 		getSheet(sheet.getBaseUrl(), sheet.getId()),
 		getSheetBoxTemplates()])
 	await updateSheetDomFromData(sheet, data)
@@ -22,7 +22,8 @@ export async function editSheet(sheet) {
 	sheet.editing = true
 	sheet.classList.add("editing")
 	// content
-	editSheetContent(sheet)
+	for (let el of sheet.children)
+		editSheetBox(el)
 }
 MsaSheetEdition.editSheet = editSheet
 
@@ -51,7 +52,7 @@ export async function saveSheet(sheet) {
 	var baseUrl = sheet.getBaseUrl()
 	var id = sheet.getId()
 	var body = { content }
-	ajax('POST', baseUrl + '/_sheet/' + id, { body: body })
+	ajax('POST', baseUrl + '/' + id, { body: body })
 		.then(res => {
 			// on update, rebuild sheet
 			updateSheetDomFromData(sheet, res)
@@ -77,31 +78,20 @@ async function _exportChildBoxes(el) {
 }
 
 // editing
-export function editSheetContent(el) {
-	if (!el) return
-	// case array
-	var len = el.length
-	if (len !== undefined) {
-		for (var i = 0; i < len; ++i) editSheetContent(el[i])
-		return
-	}
-	// case dom
-	var editor = el.msaSheetEditor_el || null
-	if (!editor) {
-		if (el.createMsaSheetEditor) {
-			editor = document.createElement("msa-sheet-content-editor")
-			document.body.appendChild(editor)
-			// link edition menu to dom
-			editor.linkTo(el)
-			el.msaSheetEditor_el = editor
-			el.classList.add('msa-sheet-content-editing')
-		}
-		// recursive call to children
-		editSheetContent(el.children)
-	}
+export async function editSheetBox(el) {
+	const templates = await getSheetBoxTemplates()
+	if (!(el.tagName.toLowerCase() in templates)) return
+	let editor = el._msaSheetEditor || null
+	if (editor) return editor
+	editor = document.createElement("msa-sheet-content-editor")
+	document.body.appendChild(editor)
+	// link edition menu to dom
+	editor.linkTo(el)
+	el._msaSheetEditor = editor
+	el.classList.add('msa-sheet-content-editing')
 	return editor
 }
-MsaSheetEdition.editSheetContent = editSheetContent
+MsaSheetEdition.editSheetBox = editSheetBox
 
 function _stopEditSheet(sheet) {
 	sheet.editing = false
@@ -111,9 +101,9 @@ function _stopEditSheet(sheet) {
 }
 export function stopEditSheetContent(el) {
 	// remove edition menu, if exists
-	if (el.msaSheetEditor_el) {
-		el.msaSheetEditor_el.remove()
-		delete el.msaSheetEditor_el
+	if (el._msaSheetEditor) {
+		el._msaSheetEditor.remove()
+		delete el._msaSheetEditor
 		el.classList.remove('msa-sheet-content-editing')
 	}
 	// recursive call to children
@@ -149,14 +139,14 @@ function restoreOriginalHtmlAndCss(sheet) {
 
 // get sheet from server
 function getSheet(baseUrl, id) {
-	return ajax('GET', baseUrl + '/_sheet/' + id)
+	return ajax('GET', baseUrl + '/' + id)
 }
 
 // get box types from server
 let SheetBoxTemplatesPrm
 export async function getSheetBoxTemplates() {
 	if (SheetBoxTemplatesPrm === undefined) {
-		SheetBoxTemplatesPrm = ajax('GET', '/sheet/templates')
+		SheetBoxTemplatesPrm = ajax('GET', '/sheet/_templates')
 	}
 	return SheetBoxTemplatesPrm
 }
@@ -181,8 +171,9 @@ async function updateSheetHtml(sheet, html) {
 	await importHtml(html, sheet)
 }
 
+// utils
 
-function findParentSheet(el) {
+export function findParentSheet(el) {
 	while (true) {
 		const parentEl = el.parentNode
 		if (!parentEl) return null
@@ -196,7 +187,19 @@ MsaSheetEdition.findParentSheet = findParentSheet
 
 // native boxes edition
 
+export const MsaSheetTextEdition = {
+	editSheetBox: function (el, boxEditor) {
+		import('/utils/msa-utils-text-editor.js').then(mod => {
+			mod.makeTextEditable(el.initContent(), { editor: boxEditor })
+		})
+	}
+}
+
 export const MsaSheetBoxesEdition = {
+	editSheetBox: function (el, boxEditor) {
+		importHtml({ wel: '/sheet/msa-sheet-boxes-editor.js' }, boxEditor)
+		for (let c of el.children) editSheetBox(c)
+	},
 	exportSheetBox: async function (el) {
 		const attrs = {}
 		for (let a of el.attributes) if (a.nodeValue) attrs[a.nodeName] = a.nodeValue

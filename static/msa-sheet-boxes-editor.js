@@ -1,7 +1,8 @@
 import { Q, importHtml, importObj } from "/utils/msa-utils.js"
 import "/utils/msa-utils-dropdown-menu.js"
-import "/sheet/msa-sheet-templates.js"
 import { importAsPopup } from "/utils/msa-utils-popup.js"
+import "/sheet/msa-sheet-templates.js"
+import { findParentSheet, editSheetBox } from "/sheet/msa-sheet-edition.js"
 
 // SVGs
 importHtml(`<svg id="msa-sheet-boxes-editor-svg" style="display:none">
@@ -57,7 +58,7 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 			createSheetBox = editObj.createSheetBox
 		}
 		if (createSheetBox) {
-			const sheet = MsaSheetEdition.findParentSheet(this.target)
+			const sheet = findParentSheet(this.target)
 			html = createSheetBox(sheet)
 		} else if (template.html) {
 			html = template.html
@@ -67,7 +68,7 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 			return
 		}
 		const newContent = (await importHtml(html, this.target))[0]
-		MsaSheetEdition.editSheetContent(newContent)
+		editSheetBox(newContent)
 	}
 
 	initActions() {

@@ -58,16 +58,19 @@ class MsaSheet extends Msa.Module {
 
 	initApp() {
 
-		this.app.get('/_sheet/:id', userMdw, (req, res, next) => {
+		this.app.get('/:id', userMdw, (req, res, next) => {
+			const reqId = req.params.id
+			if (reqId.indexOf('.') >= 0 || reqId[0] === '_')
+				return next()
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
-				const id = this.getId(ctx, req.params.id)
+				const id = this.getId(ctx, reqId)
 				const sheet = await this.getSheet(ctx, id)
 				res.json(sheet)
 			}).catch(next)
 		})
 
-		this.app.post('/_sheet/:id', userMdw, (req, res, next) => {
+		this.app.post('/:id', userMdw, (req, res, next) => {
 			withDb(async db => {
 				const ctx = newCtx(req, { db })
 				const id = this.getId(ctx, req.params.id)
@@ -79,11 +82,11 @@ class MsaSheet extends Msa.Module {
 			}).catch(next)
 		})
 
-		this.app.get('/templates', (req, res, next) => {
+		this.app.get('/_templates', (req, res, next) => {
 			res.json(Templates)
 		})
 
-		this.app.use('/:id/box',
+		this.app.use('/:id/_box',
 			(req, res, next) => {
 				req.msaSheetArgs = { id: this.getId(null, req.params.id) }
 				next()
@@ -154,7 +157,7 @@ class MsaSheet extends Msa.Module {
 			}
 		}
 
-		this.app.use("/_params/:id",
+		this.app.use("/:id/_params",
 			userMdw,
 			(req, _res, next) => {
 				req.sheetParamsArgs = {
@@ -492,7 +495,7 @@ MsaSheetPt.renderSheetAsHtml = function (sheet, baseUrl, sheetId) {
 	const content = sheet.content
 	return {
 		head: sheetHead + content.head,
-		body: "<msa-sheet base-url='" + baseUrl + "' sheet-id='" + sheetId + "' editable='" + sheet.editable + "'>" + content.body + "</msa-sheet>"
+		body: `<msa-sheet base-url='${baseUrl}' sheet-id='${sheetId}' editable='${sheet.editable}'>${content.body}</msa-sheet>`
 	}
 }
 
@@ -805,6 +808,7 @@ function deepGet(obj, key, ...args) {
 registerSheetBoxTemplate("msa-sheet-text", {
 	title: "Text",
 	html: { tag: "msa-sheet-text" },
+	editionSrc: "/sheet/msa-sheet-edition.js:MsaSheetTextEdition",
 	img: "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22%23999%22%20viewBox%3D%220%200%201024%201024%22%3E%3Cpath%20class%3D%22path1%22%20d%3D%22M896%200h-768c-17.664%200-32%2014.336-32%2032v192c0%2017.664%2014.336%2032%2032%2032h32c17.664%200%2032-14.336%2032-32l64-96h192v768l-160%2064c-17.664%200-32%2014.304-32%2032s14.336%2032%2032%2032h448c17.696%200%2032-14.304%2032-32s-14.304-32-32-32l-160-64v-768h192l64%2096c0%2017.664%2014.304%2032%2032%2032h32c17.696%200%2032-14.336%2032-32v-192c0-17.664-14.304-32-32-32z%22%3E%3C%2Fpath%3E%0A%3C%2Fsvg%3E'>"
 })
 registerSheetBoxTemplate("msa-sheet-boxes", {
