@@ -168,7 +168,6 @@ class MsaSheet extends Msa.Module {
 			this.params.app)
 	}
 }
-const MsaSheetPt = MsaSheet.prototype
 
 // get sheet //////////////////////////////////////////////////////////////////
 
@@ -491,7 +490,7 @@ var checkEditSheetPerm = function(user, sheet, updKey) {
 
 var sheetHead = formatHtml({ wel: "/sheet/msa-sheet.js" }).head
 
-MsaSheetPt.renderSheetAsHtml = function (sheet, baseUrl, sheetId) {
+function renderSheetAsHtml(sheet, baseUrl, sheetId) {
 	const content = sheet.content
 	return {
 		head: sheetHead + content.head,
@@ -609,7 +608,7 @@ var registerType = MsaSheetPt.registerType = function(type, args) {
 // templates
 const Templates = {}
 const TemplatesRouter = Msa.express.Router()
-const registerSheetBoxTemplate = MsaSheetPt.registerSheetBoxTemplate = function (tag, template) {
+const registerSheetBoxTemplate = function (tag, template) {
 	if (!template) template = {}
 	template.tag = tag
 	if (template.html)
@@ -635,12 +634,12 @@ var defaultTemplateImg = "<img src='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22
 
 
 // head
-var Heads = {}
-var registerHead = MsaSheetPt.registerHead = function (tag, head) {
+const Heads = {}
+function registerHead(tag, head) {
 	Heads[tag] = formatHtml({ head: head }).head
 }
 // browse html to determine associated heads
-var getHeads = function (htmlObj) {
+function getHeads(htmlObj) {
 	var heads = ""
 	var type = typeof htmlObj
 	if (type === "object") {
@@ -819,4 +818,9 @@ registerSheetBoxTemplate("msa-sheet-boxes", {
 })
 
 // export
-module.exports = MsaSheet
+module.exports = {
+	MsaSheet,
+	renderSheetAsHtml,
+	registerSheetBoxTemplate,
+	registerHead
+}

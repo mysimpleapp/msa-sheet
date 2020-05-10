@@ -1,2 +1,5 @@
-const MsaSheet = require("./module")
-module.exports = new MsaSheet("")
+const mod = require("./module")
+module.exports = {
+    startMsaModule: () => new mod.MsaSheet(""),
+    ...mod
+}
