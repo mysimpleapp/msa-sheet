@@ -1,4 +1,4 @@
-import { importHtml, ajax, importObj } from "/utils/msa-utils.js"
+import { importHtml, ajax, importRef } from "/utils/msa-utils.js"
 import "/sheet/msa-sheet-content-editor.js"
 
 const MsaSheetEdition = window.MsaSheetEdition = {}
@@ -69,7 +69,7 @@ async function _exportChildBoxes(el) {
 		if (template) {
 			let exportSheetBox
 			if (template.editionSrc)
-				exportSheetBox = (await importObj(template.editionSrc)).exportSheetBox
+				exportSheetBox = (await importRef(template.editionSrc)).exportSheetBox
 			const r = exportSheetBox ? await asPrm(exportSheetBox(c)) : c.outerHTML
 			if (r) res.push(r)
 		}

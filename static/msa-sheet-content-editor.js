@@ -1,4 +1,4 @@
-import { importHtml, importObj, Q } from "/utils/msa-utils.js"
+import { importHtml, importRef, Q } from "/utils/msa-utils.js"
 import { makeMovable } from "/utils/msa-utils-mover.js"
 import { makeResizable } from "/utils/msa-utils-resizer.js"
 import { popupFlexItemMenuFor } from "/utils/msa-utils-flex-item-menu.js"
@@ -102,7 +102,7 @@ export class HTMLMsaSheetContentEditorElement extends HTMLElement {
 		const templates = await getSheetBoxTemplates()
 		const template = templates[target.tagName.toLowerCase()]
 		if (template.editionSrc) {
-			const editSheetBox = (await importObj(template.editionSrc)).editSheetBox
+			const editSheetBox = (await importRef(template.editionSrc)).editSheetBox
 			if (editSheetBox) editSheetBox(target, this)
 		}
 		// on target click

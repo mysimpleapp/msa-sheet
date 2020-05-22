@@ -1,4 +1,4 @@
-import { Q, importHtml, importObj } from "/utils/msa-utils.js"
+import { Q, importHtml, importRef } from "/utils/msa-utils.js"
 import "/utils/msa-utils-dropdown-menu.js"
 import { importAsPopup } from "/utils/msa-utils-popup.js"
 import "/sheet/msa-sheet-templates.js"
@@ -54,7 +54,7 @@ export class HTMLMsaSheetBoxesEditorElement extends HTMLElement {
 	async insertNewContent(template) {
 		let html, createSheetBox
 		if (template.editionSrc) {
-			const editObj = await importObj(template.editionSrc)
+			const editObj = await importRef(template.editionSrc)
 			createSheetBox = editObj.createSheetBox
 		}
 		if (createSheetBox) {
